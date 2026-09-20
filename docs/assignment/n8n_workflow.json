@@ -1,0 +1,148 @@
+{
+  "id": "mohandas-payment-decision-wf",
+  "name": "MohanDa's - Automated Payment Confirmation Decision",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mohandas-payment-decision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ingest",
+      "name": "1. Ingest: Bank SMS Forwarder",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-140, 240],
+      "webhookId": "mohandas-payment-decision"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/webhook/bank-sms",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key", "value": "REPLACE_WITH_YOUR_SMS_WEBHOOK_SECRET" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "id": "http-analyze-decide",
+      "name": "2. Analyze + Decide (ShopBot matcher)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [100, 240],
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-matched",
+              "leftValue": "={{ $json.matched_order }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-matched",
+      "name": "3. Decision: Bank Credit Matched?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [340, 240]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "decision", "type": "string", "value": "AUTO_CONFIRMED" },
+            { "id": "a2", "name": "order_code", "type": "string", "value": "={{ $json.matched_order }}" },
+            { "id": "a3", "name": "human_checkpoint", "type": "boolean", "value": false },
+            { "id": "a4", "name": "action_taken", "type": "string", "value": "Order marked PAID; customer notified automatically: 'Payment received ✅'. Owner's live board updated." },
+            { "id": "a5", "name": "evidence", "type": "string", "value": "Bank's own credit SMS matched this order's exact payable amount within its payment window (UTR-verified where available)." }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-auto-confirmed",
+      "name": "4a. Act: Auto-confirm + notify",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [580, 120]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "b1", "name": "decision", "type": "string", "value": "ESCALATED_TO_OWNER" },
+            { "id": "b2", "name": "order_code", "type": "string", "value": "={{ $json.matched_order || null }}" },
+            { "id": "b3", "name": "human_checkpoint", "type": "boolean", "value": true },
+            { "id": "b4", "name": "action_taken", "type": "string", "value": "No safe automatic match. Flagged in the owner's Needs-Attention queue and an owner alert was sent (console/Telegram). A human decides next, per the automation argument's human-in-the-loop boundary." },
+            { "id": "b5", "name": "ingest_status", "type": "string", "value": "={{ $json.status }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-escalated",
+      "name": "4b. Act: Escalate to human",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [580, 360]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-confirmed",
+      "name": "5a. Respond: confirmed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [820, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-escalated",
+      "name": "5b. Respond: escalated",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [820, 360]
+    }
+  ],
+  "connections": {
+    "1. Ingest: Bank SMS Forwarder": {
+      "main": [[{ "node": "2. Analyze + Decide (ShopBot matcher)", "type": "main", "index": 0 }]]
+    },
+    "2. Analyze + Decide (ShopBot matcher)": {
+      "main": [[{ "node": "3. Decision: Bank Credit Matched?", "type": "main", "index": 0 }]]
+    },
+    "3. Decision: Bank Credit Matched?": {
+      "main": [
+        [{ "node": "4a. Act: Auto-confirm + notify", "type": "main", "index": 0 }],
+        [{ "node": "4b. Act: Escalate to human", "type": "main", "index": 0 }]
+      ]
+    },
+    "4a. Act: Auto-confirm + notify": {
+      "main": [[{ "node": "5a. Respond: confirmed", "type": "main", "index": 0 }]]
+    },
+    "4b. Act: Escalate to human": {
+      "main": [[{ "node": "5b. Respond: escalated", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Menu — ShopBot{% endblock %}
+{% block content %}
+<h2>Menu</h2>
+<table>
+  <tr><th>Item</th><th>Price</th><th>Aliases</th><th>Available</th><th></th></tr>
+  {% for m in items %}
+  <tr>
+    <td>{{ m.name }}</td>
+    <td>{{ m.price }}</td>
+    <td><small>{{ m.aliases }}</small></td>
+    <td>{{ 'Yes' if m.available else 'No' }}</td>
+    <td>
+      <form method="post" action="/admin/menu/{{ m.id }}/toggle">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="secondary">{{ 'Disable' if m.available else 'Enable' }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+<form method="post" action="/admin/menu/export" style="margin-top:12px;">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit">Export to menu.yaml</button>
+</form>
+{% endblock %}

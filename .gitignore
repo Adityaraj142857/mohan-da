@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# ShopBot runtime data (SPEC C6/C7: local-only, never committed)
+.env
+*.db
+*.db-shm
+*.db-wal
+media/
+backups/
+.pytest_cache/
+.ruff_cache/
+
+# n8n local runtime data (encryption key, sqlite db, execution history) —
+# the workflow definition itself lives in docs/assignment/n8n_workflow.json
+.n8n/
+

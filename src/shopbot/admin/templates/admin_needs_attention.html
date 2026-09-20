@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Needs attention — ShopBot{% endblock %}
+{% block content %}
+<h2>Needs attention</h2>
+{% for it in items %}
+<div class="card">
+  <strong>{{ it.code }}</strong> — expected {{ it.amount }} — status {{ it.status }}
+  <table>
+    <tr><th>Check</th><th>Result</th></tr>
+    {% for cid, c in it.checks.items() %}
+    <tr><td>{{ cid }}</td><td><span class="badge {{ c.verdict|lower }}">{{ c.verdict }}</span> {{ c.reason }}</td></tr>
+    {% endfor %}
+  </table>
+  <p>Extracted: amount candidates {{ it.extracted.get('amount_candidates') }}, UTR {{ it.extracted.get('utr') }}, status {{ it.extracted.get('status') }}</p>
+  <form method="post" action="/admin/needs-attention/{{ it.order_id }}/approve" style="display:inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Approve (I saw the credit)</button>
+  </form>
+  <form method="post" action="/admin/needs-attention/{{ it.order_id }}/reject" style="display:inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" class="danger">Reject</button>
+  </form>
+</div>
+{% else %}
+<p>Nothing needs your attention right now.</p>
+{% endfor %}
+{% endblock %}

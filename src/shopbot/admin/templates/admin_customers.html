@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Customers — ShopBot{% endblock %}
+{% block content %}
+<h2>Customers</h2>
+<table>
+  <tr><th>WhatsApp ID</th><th>Orders</th><th>Fraud flags</th><th>Blocked</th><th></th></tr>
+  {% for c in customers %}
+  <tr>
+    <td>{{ c.wa_id }}</td>
+    <td>{{ c.orders }}</td>
+    <td>{{ c.fraud_flags }}</td>
+    <td>{{ 'Yes' if c.blocked else 'No' }}</td>
+    <td>
+      <form method="post" action="/admin/customers/{{ c.id }}/block">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="{{ 'secondary' if c.blocked else 'danger' }}">{{ 'Unblock' if c.blocked else 'Block' }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

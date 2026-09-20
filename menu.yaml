@@ -1,0 +1,145 @@
+# Real menu for MohanDa's (Ramanujan Hostel, IIM Calcutta), transcribed from
+# the shop's printed menu card (17/07/2026). The DB becomes the runtime
+# source of truth after first load — edit prices/availability from
+# /admin/menu once the app has started once; editing this file afterwards
+# will NOT change already-seeded items (only newly added ones).
+#
+# Items whose printed price had slash-separated variants (e.g. "Veg/Egg/
+# Chicken") were split into one menu line per variant. Double-check prices
+# against the physical menu before trusting this for real orders.
+delivery_fee_paise: 1500
+delivery_fee_by_hostel: {}
+items:
+  # --- Sandwiches ---
+  - {name: Plain Cheese Sandwich Grilled, price: 42, aliases: [plain cheese sandwich, plain sandwich]}
+  - {name: Veg Cheese Sandwich Grilled, price: 60, aliases: [veg cheese sandwich]}
+  - {name: Aloo Cheese Sandwich Grilled, price: 60, aliases: [aloo cheese sandwich, alu cheese sandwich]}
+  - {name: Veg Tikki Cheese Sandwich Grilled, price: 70, aliases: [veg tikki sandwich, veg tikki cheese sandwich]}
+  - {name: Paneer Cheese Sandwich Grilled, price: 70, aliases: [paneer cheese sandwich, paneer sandwich]}
+  - {name: Chicken Tikki Cheese Sandwich Grilled, price: 75, aliases: [chicken tikki sandwich]}
+  - {name: Chicken Cheese Sandwich Grilled, price: 70, aliases: [chicken cheese sandwich]}
+  - {name: Chicken Sandwich Grilled (no cheese), price: 50, aliases: [chicken sandwich without cheese, chicken sandwich no cheese]}
+  - {name: Chicken Sausage Cheese Sandwich Grilled, price: 70, aliases: [chicken sausage sandwich, sausage cheese sandwich]}
+
+  # --- Fries / burgers / patties ---
+  - {name: French Fries, price: 50, aliases: [fries, french fries]}
+  - {name: Chicken Cheese Burger, price: 75, aliases: [chicken burger, chicken cheese burger]}
+  - {name: Veg Cheese Burger, price: 70, aliases: [veg burger, veg cheese burger]}
+  - {name: Paneer Masala Patty, price: 40, aliases: [paneer patty]}
+  - {name: Paneer Masala Patty with Cheese, price: 60, aliases: [paneer patty with cheese, paneer cheese patty]}
+  - {name: Veg Masala Patty, price: 40, aliases: [veg patty, veg masala patty]}
+  - {name: Veg Masala Patty with Cheese, price: 60, aliases: [veg patty with cheese, veg cheese patty]}
+  - {name: Chicken Masala Patty, price: 50, aliases: [chicken patty]}
+  - {name: Chicken Masala Patty with Cheese, price: 70, aliases: [chicken patty with cheese, chicken cheese patty]}
+  - {name: Vada Pav, price: 50, aliases: [vadapav, vada pav]}
+  - {name: Vada Pav with Cheese, price: 70, aliases: [vada pav cheese, cheese vada pav]}
+  - {name: Pav Bhaji, price: 50, aliases: [pav bhaji, pavbhaji]}
+  - {name: Extra Pav, price: 15, aliases: [extra pav]}
+
+  # --- Momos ---
+  - {name: Steamed Momo Veg, price: 70, aliases: [veg momo, steamed veg momo]}
+  - {name: Steamed Momo Chicken, price: 70, aliases: [chicken momo, steamed chicken momo]}
+  - {name: Fried Momo Veg, price: 80, aliases: [fried veg momo]}
+  - {name: Fried Momo Chicken, price: 80, aliases: [fried chicken momo]}
+  - {name: Pan Fried Momo Veg, price: 100, aliases: [pan fried veg momo]}
+  - {name: Pan Fried Momo Chicken, price: 100, aliases: [pan fried chicken momo]}
+
+  # --- Eggs ---
+  - {name: Boiled Egg, price: 13, aliases: [boiled egg, egg boil]}
+  - {name: Double Egg Bread Omelette, price: 45, aliases: [egg bread omelette, double egg omelette]}
+  - {name: Double Egg Bread Omelette with Cheese, price: 65, aliases: [egg omelette cheese, double egg omelette with cheese]}
+  - {name: Half Fry (2 Eggs 2 Bread), price: 45, aliases: [half fry]}
+  - {name: Scrambled Egg (2 Eggs 2 Bread), price: 45, aliases: [scrambled egg, scramble egg]}
+  - {name: Boiled Egg Chaat, price: 50, aliases: [egg chaat, boiled egg chaat]}
+
+  # --- Chicken snacks ---
+  - {name: Chicken Nuggets, price: 75, aliases: [chicken nuggets]}
+  - {name: Chicken Drumstick, price: 65, aliases: [chicken drumstick, drumstick]}
+  - {name: Chicken Sausage Fry, price: 80, aliases: [chicken sausage fry, sausage fry]}
+  - {name: Chicken Sausage Steamed, price: 80, aliases: [chicken sausage steamed, sausage steamed]}
+  - {name: Chicken Wings (1pc), price: 40, aliases: [chicken wings, wings]}
+  - {name: Chicken Strips (1pc), price: 60, aliases: [chicken strips, strips]}
+  - {name: Chicken Seekh Kebab (3pc), price: 125, aliases: [seekh kebab, chicken seekh kebab]}
+  - {name: Chicken Spring Roll, price: 75, aliases: [chicken spring roll]}
+  - {name: Chicken Kathi Roll, price: 75, aliases: [chicken kathi roll, kathi roll]}
+
+  # --- Rolls ---
+  - {name: Egg Roll, price: 60, aliases: [egg roll, e roll]}
+  - {name: Paneer Roll, price: 75, aliases: [paneer roll]}
+  - {name: Veg Spring Roll, price: 60, aliases: [veg spring roll]}
+
+  # --- Fried snacks ---
+  - {name: Mini Samosa (5pc), price: 75, aliases: [mini samosa, samosa]}
+  - {name: Chilli Garlic Potato Bites (8pc), price: 50, aliases: [chilli garlic potato, potato bites]}
+  - {name: Veg Cheese Nuggets (5pc), price: 60, aliases: [veg cheese nuggets, veg nuggets]}
+  - {name: Smiley (5pc), price: 50, aliases: [smiley, smileys]}
+  - {name: Aloo Paratha, price: 50, aliases: [aloo paratha, alu paratha]}
+
+  # --- Rice / oats ---
+  - {name: Masala Rice Veg, price: 50, aliases: [veg masala rice, veg rice]}
+  - {name: Masala Rice Egg, price: 70, aliases: [egg masala rice, egg rice]}
+  - {name: Masala Rice Chicken, price: 75, aliases: [chicken masala rice, chicken rice]}
+  - {name: Masala Rice Paneer, price: 75, aliases: [paneer masala rice, paneer rice]}
+  - {name: Oats Veg, price: 40, aliases: [veg oats]}
+  - {name: Oats Egg, price: 60, aliases: [egg oats]}
+  - {name: Oats Chicken, price: 65, aliases: [chicken oats]}
+
+  # --- Soups ---
+  - {name: Tomato Soup, price: 35, aliases: [tomato soup]}
+  - {name: Tomato Soup with Butter, price: 50, aliases: [tomato soup butter]}
+  - {name: Veg Sweet Corn Soup, price: 35, aliases: [sweet corn soup, veg sweet corn soup]}
+  - {name: Veg Sweet Corn Soup with Butter, price: 50, aliases: [sweet corn soup butter]}
+  - {name: Hot and Sour Veg Soup, price: 35, aliases: [hot sour soup, hot and sour soup]}
+  - {name: Hot and Sour Veg Soup with Butter, price: 50, aliases: [hot sour soup butter]}
+
+  # --- Chaat ---
+  - {name: Sprout Chaat Veg, price: 45, aliases: [veg sprout chaat]}
+  - {name: Sprout Chaat Egg, price: 60, aliases: [egg sprout chaat]}
+  - {name: Sprout Chaat Chicken, price: 65, aliases: [chicken sprout chaat]}
+  - {name: Peanut Chaat, price: 45, aliases: [peanut chaat]}
+  - {name: Chips Chaat, price: 45, aliases: [chips chaat]}
+  - {name: Sweet Corn Chaat, price: 50, aliases: [sweet corn chaat, corn chaat]}
+  - {name: Fruit Chaat, price: 60, aliases: [fruit chaat]}
+
+  # --- Pasta ---
+  - {name: Masala Pasta Veg, price: 60, aliases: [veg masala pasta]}
+  - {name: Masala Pasta Egg, price: 75, aliases: [egg masala pasta]}
+  - {name: Masala Pasta Chicken, price: 85, aliases: [chicken masala pasta]}
+  - {name: White Sauce Pasta Veg, price: 70, aliases: [white sauce pasta veg]}
+  - {name: White Sauce Pasta Non-Veg, price: 95, aliases: [white sauce pasta chicken, white sauce pasta non veg]}
+  - {name: Red Sauce Pasta Veg, price: 80, aliases: [red sauce pasta veg]}
+  - {name: Red Sauce Pasta Non-Veg, price: 105, aliases: [red sauce pasta chicken, red sauce pasta non veg]}
+
+  # --- Drinks ---
+  - {name: Cold Bournvita, price: 50, aliases: [cold bournvita]}
+  - {name: Hot Bournvita, price: 50, aliases: [hot bournvita]}
+  - {name: Cold Coffee, price: 50, aliases: [cold coffee]}
+  - {name: Cold Milk, price: 25, aliases: [cold milk]}
+  - {name: Hot Milk, price: 30, aliases: [hot milk]}
+  - {name: Haldi Milk Hot, price: 30, aliases: [haldi milk, turmeric milk]}
+  - {name: Hot Chocolate Milk, price: 50, aliases: [hot chocolate milk]}
+  - {name: Cold Chocolate Milk, price: 50, aliases: [cold chocolate milk]}
+  - {name: Masala Soda, price: 40, aliases: [masala soda]}
+  - {name: Masala Coke, price: 45, aliases: [masala coke]}
+  - {name: Ice Tea, price: 40, aliases: [ice tea, iced tea]}
+
+  # --- Upma / Poha ---
+  - {name: Upma, price: 60, aliases: [upma]}
+  - {name: Poha, price: 50, aliases: [poha]}
+
+  # --- Maggi ---
+  - {name: Plain Masala Maggi, price: 45, aliases: [plain maggi, masala maggi]}
+  - {name: Plain Masala Maggi with Cheese, price: 65, aliases: [plain maggi cheese, masala maggi cheese]}
+  - {name: Double Masala Maggi, price: 50, aliases: [double masala maggi, double maggi]}
+  - {name: Double Masala Maggi with Cheese, price: 70, aliases: [double maggi cheese]}
+  - {name: Vegetable Maggi, price: 50, aliases: [veg maggi, vegetable maggi]}
+  - {name: Vegetable Maggi with Cheese, price: 70, aliases: [veg maggi cheese, vegetable maggi cheese]}
+  - {name: Chicken Masala Maggi, price: 70, aliases: [chicken maggi, chicken masala maggi]}
+  - {name: Fried Maggi Veg, price: 50, aliases: [fried veg maggi]}
+  - {name: Fried Maggi Egg, price: 70, aliases: [fried egg maggi]}
+  - {name: Fried Maggi Chicken, price: 75, aliases: [fried chicken maggi]}
+  - {name: Atta Maggi, price: 50, aliases: [atta maggi]}
+  - {name: Atta Maggi with Cheese, price: 70, aliases: [atta maggi cheese]}
+  - {name: Butter Garlic Maggi, price: 70, aliases: [butter garlic maggi]}
+  - {name: Korean Veg Maggi, price: 70, aliases: [korean veg maggi]}
+  - {name: Korean Chicken Maggi, price: 70, aliases: [korean chicken maggi]}

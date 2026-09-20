@@ -1,0 +1,16 @@
+{% for m in history %}
+  <div class="row {{ 'out' if m.direction == 'out' else 'in' }}">
+    <div class="bubble">
+      {% if m.direction == 'out' %}<div class="label">{{ shop_name }}</div>{% endif %}
+      {% if m.kind == 'image' %}
+        <img src="data:image/png;base64,{{ m.image_bytes|b64 }}" alt="QR code">
+        {% if m.caption %}<div class="cap">{{ m.caption|whatsapp_format }}</div>{% endif %}
+      {% else %}
+        {{ m.text|whatsapp_format }}
+      {% endif %}
+      <span class="ts">{{ m.ts.strftime('%I:%M %p') if m.ts else '' }}{% if m.direction == 'in' %} <span class="ticks">✓✓</span>{% endif %}</span>
+    </div>
+  </div>
+{% else %}
+  <p style="text-align:center;color:#667781;font-size:13px;">No messages yet — say hi below 👋</p>
+{% endfor %}

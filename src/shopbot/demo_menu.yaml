@@ -1,0 +1,51 @@
+# Stable dummy menu (SPEC Appendix A) used by the test/demo Harness and
+# `python -m shopbot demo` — deliberately separate from the real shop's
+# `menu.yaml` at the repo root, which the owner edits freely and which must
+# never break the regression suite. See docs/DECISIONS.md.
+delivery_fee_paise: 1500
+delivery_fee_by_hostel: {}
+items:
+  - name: Tea
+    price: 10
+    aliases: [chai, cha, tea]
+    max_qty: 20
+  - name: Coffee
+    price: 15
+    aliases: [coffee, kofi]
+    max_qty: 20
+  - name: Samosa
+    price: 10
+    aliases: [samosa, samosha, singara]
+    max_qty: 30
+  - name: Veg Roll
+    price: 40
+    aliases: [veg roll, vegroll]
+    max_qty: 20
+  - name: Egg Roll
+    price: 50
+    aliases: [egg roll, eggroll, e roll]
+    max_qty: 20
+  - name: Chicken Roll
+    price: 70
+    aliases: [chicken roll, chkn roll]
+    max_qty: 20
+  - name: Maggi
+    price: 35
+    aliases: [maggi, noodles]
+    max_qty: 20
+  - name: Egg Maggi
+    price: 45
+    aliases: [egg maggi]
+    max_qty: 20
+  - name: Veg Fried Rice
+    price: 80
+    aliases: [veg rice, veg fried rice]
+    max_qty: 10
+  - name: Chicken Fried Rice
+    price: 110
+    aliases: [chicken rice, chicken fried rice]
+    max_qty: 10
+  - name: Cold Drink
+    price: 20
+    aliases: [coke, pepsi, cold drink]
+    max_qty: 20

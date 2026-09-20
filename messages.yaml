@@ -1,0 +1,46 @@
+# Conversation templates (SPEC 8.1, Appendix C). English default. Owner can
+# add Hinglish/Bengali variants later; keys must stay the same.
+welcome: >-
+  Hi! 👋 Welcome to {shop}. Send your order like *2 samosa, 1 chai*.
+  Takeout or hostel delivery (+₹{fee}). Open {hours}.
+menu_text: >-
+  📋 *Menu*
+  {menu_lines}
+summary_ask_fulfilment: >-
+  {lines}
+  Subtotal ₹{subtotal}
+  Takeout or delivery (+₹{fee})?
+clarify_unresolved: >-
+  I didn't catch: {unresolved}. Did you mean {suggestions}?
+need_hostel: >-
+  Which hostel and room? (e.g. "Hostel B room 204")
+unknown_hostel: >-
+  Sorry, we don't deliver to "{hostel}". We deliver to: {hostels}.
+summary: >-
+  {lines}
+  Subtotal ₹{subtotal}
+  Delivery ₹{fee}
+  *Total ₹{total}*{unique_note}
+  Confirm? (yes/no)
+unique_note: " (Amount to pay: ₹{payable} — a small adjustment so we can match your payment automatically)"
+pay: >-
+  Pay ₹{payable} here 👉 {pay_url}
+  (valid till {expires}). You'll get a confirmation here as soon as it
+  reaches us — screenshot is optional.
+paid: "✅ Payment received for order {code}. {eta}"
+claim_pending: "Thanks! Waiting for the bank to confirm — usually under a minute."
+claim_needs_owner: "Thanks! We're double-checking this with the shop — hang tight."
+claim_rejected: >-
+  We couldn't verify that screenshot. Please pay the exact amount using the
+  link, or send a clearer screenshot.
+expired: "Order {code} expired. Reply *repeat* to place it again."
+cancelled: "Order {code} cancelled."
+out_of_hours: "We're closed right now ({hours}). You can still browse the menu — reply *menu*."
+help_text: >-
+  Commands: *menu*, *cancel*, *status*, *repeat*, *human* (talk to a person).
+  To order, just type item names, e.g. "2 samosa and 1 chai".
+human_notice: "Okay, I've let the shop know — someone will reply here shortly."
+blocked_generic: "Sorry, we can't take this order right now. Please contact the shop directly."
+unknown_input: "Sorry, I didn't understand that. Reply *menu* to see items, or *help*."
+image_unexpected: "Got your image! If that's a payment screenshot, send it after you get the payment link."
+already_confirmed: "This order is already confirmed ✅"

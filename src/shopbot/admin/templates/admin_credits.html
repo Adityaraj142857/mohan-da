@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Bank credits — ShopBot{% endblock %}
+{% block content %}
+<h2>Bank credits</h2>
+
+<div class="card">
+  <h3>Paste bank SMS</h3>
+  <form method="post" action="/admin/credits/paste-sms">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Sender ID</label>
+    <input type="text" name="sender" value="VM-DEMOBK">
+    <label>SMS text</label>
+    <textarea name="body" rows="3" required></textarea>
+    <button type="submit">Parse &amp; store</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Add credit manually</h3>
+  <form method="post" action="/admin/credits/manual">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Amount (₹)</label>
+    <input type="text" name="amount_rupees" placeholder="114.63" required>
+    <label>UTR (optional)</label>
+    <input type="text" name="utr">
+    <button type="submit">Add</button>
+  </form>
+</div>
+
+<table>
+  <tr><th>When</th><th>Amount</th><th>UTR</th><th>Status</th><th>Matched order</th><th>Raw</th><th></th></tr>
+  {% for c in credits %}
+  <tr>
+    <td>{{ c.sender }}</td>
+    <td>{{ c.amount }}</td>
+    <td>{{ c.utr or '—' }}</td>
+    <td>{{ c.status }}</td>
+    <td>{{ c.matched_order or '—' }}</td>
+    <td><small>{{ c.raw }}</small></td>
+    <td>
+      <form method="post" action="/admin/credits/{{ c.id }}/dismiss">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="secondary">Dismiss</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

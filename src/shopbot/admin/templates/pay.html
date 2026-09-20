@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay {{ order_code }} — {{ shop_name }}</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #f5f6f8; margin: 0; }
+  .wrap { max-width: 420px; margin: 0 auto; padding: 20px; }
+  .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 14px; text-align: center; }
+  .amount { font-size: 40px; font-weight: 700; margin: 8px 0; }
+  .items { text-align: left; font-size: 14px; color: #444; }
+  a.button, button { display: block; width: 100%; padding: 14px; background: #1f6f43; color: white; border: none; border-radius: 8px; font-size: 16px; text-decoration: none; margin: 8px 0; box-sizing: border-box; cursor: pointer; }
+  button.secondary { background: #555; }
+  img.qr { width: 220px; margin: 12px auto; display: block; }
+  #status { font-weight: 600; margin-top: 10px; }
+  #status.paid { color: #146c2e; }
+  input[type=file] { width: 100%; margin: 10px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div>{{ shop_name }} — Order {{ order_code }}</div>
+    <div class="amount">{{ amount }}</div>
+    <div class="items">
+      {% for it in items %}<div>{{ it.qty }}x {{ it.name }} — {{ it.line_total }}</div>{% endfor %}
+    </div>
+    <p><small>Valid till {{ expires_at }}</small></p>
+    <a class="button" href="{{ upi_uri }}">Pay with UPI app</a>
+    <img class="qr" src="/qr/{{ token }}.png" alt="UPI QR code">
+    <button class="secondary" onclick="navigator.clipboard.writeText('{{ vpa }}')">Copy UPI ID: {{ vpa }}</button>
+    <button class="secondary" onclick="navigator.clipboard.writeText('{{ amount }}')">Copy amount</button>
+    <div id="status">{{ status }}</div>
+  </div>
+  {% if is_demo %}
+  <div class="card" style="background:#fff8e1;">
+    <p style="margin-top:0;">🧪 <strong>Demo mode</strong> — no real UPI payment needed.</p>
+    <button id="simulateBtn" onclick="simulatePayment()">Simulate this payment</button>
+    <div id="simResult" style="font-size:13px;color:#666;"></div>
+  </div>
+  {% endif %}
+  <div class="card">
+    <p>Already paid? Upload your screenshot (optional).</p>
+    <input type="file" id="shot" accept="image/*">
+    <button onclick="uploadShot()">Upload screenshot</button>
+    <div id="shotResult"></div>
+  </div>
+</div>
+<script>
+async function poll() {
+  const res = await fetch('/pay/{{ token }}/status');
+  if (!res.ok) return;
+  const data = await res.json();
+  const el = document.getElementById('status');
+  if (data.status === 'PAID') {
+    el.textContent = 'Payment confirmed ✅';
+    el.className = 'paid';
+  } else {
+    el.textContent = data.status;
+  }
+}
+setInterval(poll, 3000);
+poll();
+
+async function uploadShot() {
+  const input = document.getElementById('shot');
+  if (!input.files.length) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  const res = await fetch('/pay/{{ token }}/screenshot', { method: 'POST', body: fd });
+  const data = await res.json();
+  document.getElementById('shotResult').textContent = 'Result: ' + data.verdict;
+}
+
+async function simulatePayment() {
+  const btn = document.getElementById('simulateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Simulating...';
+  try {
+    const res = await fetch('/pay/{{ token }}/simulate', { method: 'POST' });
+    const data = await res.json();
+    document.getElementById('simResult').textContent = data.matched
+      ? 'Bank credit simulated — confirming...'
+      : 'Simulated, but not matched (' + data.status + ').';
+    await poll();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Simulate this payment';
+  }
+}
+</script>
+</body>
+</html>

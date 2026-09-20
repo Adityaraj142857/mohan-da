@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Reports — ShopBot{% endblock %}
+{% block content %}
+<h2>Reports</h2>
+<div class="card">
+  <p>Paid/fulfilled orders: <strong>{{ total_orders }}</strong></p>
+  <p>Total sales: <strong>{{ total_sales }}</strong></p>
+  <p>Delivery: {{ delivery_count }} · Takeout: {{ takeout_count }}</p>
+  <p>Unverified (auto-approved, reconcile with bank): <strong>{{ unverified_count }}</strong></p>
+  <p>Outbound messages this month: {{ outbound_count }} / {{ message_free_allowance }}
+    {% if allowance_warn %}<span class="badge fail">80%+ used</span>{% endif %}
+  </p>
+  <a href="/admin/reports/export.csv"><button type="button">Export CSV</button></a>
+</div>
+{% endblock %}
