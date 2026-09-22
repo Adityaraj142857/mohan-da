@@ -24,6 +24,31 @@ That's the only script you need — `scripts/demo.sh` and `scripts/run.sh` were 
 | n8n | http://localhost:5678 | ✅ running via `start.sh` |
 | Public tunnel | — | ❌ off — the free Cloudflare tunnel was unreliable; ShopBot runs in QR-image mode instead (no external dependency) |
 
+## Bug fixed: "waiting for payment" swallowing unrelated messages
+
+Reported: while an order was `AWAITING_PAYMENT`, asking "what is the total
+amount" just got the generic "Waiting for your payment" reply instead of
+an answer. Root cause was two-fold:
+1. **Real code gap**: the awaiting-payment handler only recognised
+   `cancel`; anything else got the same canned reply. Fixed —
+   `_handle_awaiting_payment_text` now recognises amount/total questions
+   (replies with the order code, exact amount, and expiry) and
+   link/QR-resend requests (replies with a fresh pay link or QR). Covered
+   by `tests/scenarios/test_end_to_end.py`.
+2. **Stale test data**: demo customers (`cust-1`, etc.) had accumulated
+   leftover `AWAITING_PAYMENT` orders from earlier development testing,
+   so a *new* order for the same demo customer got routed into that old
+   order's payment-wait state instead of starting fresh. Root cause of
+   *that*: this machine's interactive shell aliases `rm` to `trash` (which
+   doesn't support `-f`), so earlier `rm -f shopbot.db...` cleanup commands
+   were silently no-ops. Fixed by deleting via `/bin/rm` directly and
+   restarting with a clean database. (`start.sh` itself runs via `bash`,
+   which is unaffected by this interactive-shell alias — no script changes
+   needed there.) If you see similarly "stuck" demo-customer state again,
+   it's almost certainly just old test data — either `bash start.sh stop`,
+   delete `shopbot.db*` with `/bin/rm`, and `bash start.sh` again, or pick
+   a fresh `wa_id` in `/sim`.
+
 ## Developer testing bypass
 
 Send the exact word **`adityaorder`** as a message to any customer

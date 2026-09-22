@@ -477,14 +477,49 @@ class ConversationEngine:
     def _paise_str(self, paise: int) -> str:
         return format_inr(paise)[1:]
 
+    _AMOUNT_QUERY_WORDS = ("total", "amount", "how much", "price", "kitna", "koto")
+    _LINK_QUERY_WORDS = ("link", "qr", "pay link", "payment link", "resend", "send again", "send it again")
+
     def _handle_awaiting_payment_text(self, session, conv, customer, context, norm, raw_text) -> EngineResult:
         order_id = context.get("order_id")
         order = session.get(Order, order_id) if order_id else None
         if order and order.status == "PAID":
             return EngineResult(messages=[Outbound(kind="text", text=self.templates.render("already_confirmed"))])
+
+        if order and any(w in norm for w in self._AMOUNT_QUERY_WORDS):
+            expires_ist = to_ist(order.expires_at).strftime("%I:%M %p") if order.expires_at else "soon"
+            text = (
+                f"Order {order.code}: total {format_inr(order.payable_paise)}, "
+                f"valid till {expires_ist}. Reply *cancel* to cancel this order."
+            )
+            return EngineResult(messages=[Outbound(kind="text", text=text)])
+
+        if order and any(w in norm for w in self._LINK_QUERY_WORDS):
+            return self._resend_payment(order)
+
         return EngineResult(
             messages=[Outbound(kind="text", text="Waiting for your payment. Reply *cancel* to cancel this order.")]
         )
+
+    def _resend_payment(self, order: Order) -> EngineResult:
+        pay_url = build_pay_url(self.settings.public_base_url, order.pay_token)
+        expires_ist = to_ist(order.expires_at).strftime("%I:%M %p") if order.expires_at else ""
+        if pay_url:
+            text = self.templates.render(
+                "pay", payable=self._paise_str(order.payable_paise), pay_url=pay_url, expires=expires_ist
+            )
+            return EngineResult(messages=[Outbound(kind="text", text=text)])
+        upi_uri = build_upi_uri(
+            self.settings.upi_vpa, self.settings.payee_name, order.payable_paise, order.code, self.settings.shop_name
+        )
+        from shopbot.payments.qr import make_qr_png
+
+        qr_png = make_qr_png(upi_uri)
+        caption = (
+            f"Pay {format_inr(order.payable_paise)} to {self.settings.upi_vpa} "
+            f"({self.settings.payee_name}) — valid till {expires_ist}."
+        )
+        return EngineResult(messages=[Outbound(kind="image", image_bytes=qr_png, caption=caption)])
 
     # -- payment confirmation push -------------------------------------------
 
