@@ -1,27 +1,39 @@
 {% extends "base.html" %}
 {% block title %}Needs attention — ShopBot{% endblock %}
 {% block content %}
-<h2>Needs attention</h2>
+<h1 class="page-title">Needs attention</h1>
+<p class="page-subtitle">Payments the system couldn't confirm on its own — you decide.</p>
 {% for it in items %}
-<div class="card">
-  <strong>{{ it.code }}</strong> — expected {{ it.amount }} — status {{ it.status }}
-  <table>
-    <tr><th>Check</th><th>Result</th></tr>
-    {% for cid, c in it.checks.items() %}
-    <tr><td>{{ cid }}</td><td><span class="badge {{ c.verdict|lower }}">{{ c.verdict }}</span> {{ c.reason }}</td></tr>
-    {% endfor %}
-  </table>
-  <p>Extracted: amount candidates {{ it.extracted.get('amount_candidates') }}, UTR {{ it.extracted.get('utr') }}, status {{ it.extracted.get('status') }}</p>
-  <form method="post" action="/admin/needs-attention/{{ it.order_id }}/approve" style="display:inline">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <button type="submit">Approve (I saw the credit)</button>
-  </form>
-  <form method="post" action="/admin/needs-attention/{{ it.order_id }}/reject" style="display:inline">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <button type="submit" class="danger">Reject</button>
-  </form>
+<div class="card" style="max-width: 720px;">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+    <strong style="font-size:16px;">{{ it.code }}</strong>
+    <span style="color:var(--text-dim); font-size:13px;">Expected {{ it.amount }} · {{ it.status }}</span>
+  </div>
+  {% if it.checks %}
+  <div style="overflow-x:auto;">
+    <table>
+      <tr><th>Check</th><th>Result</th></tr>
+      {% for cid, c in it.checks.items() %}
+      <tr><td>{{ cid }}</td><td><span class="badge {{ c.verdict|lower }}">{{ c.verdict }}</span> {{ c.reason }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <p style="font-size:12.5px; color:var(--text-dim); margin: 10px 0;">Extracted: amount candidates {{ it.extracted.get('amount_candidates') }}, UTR {{ it.extracted.get('utr') }}, status {{ it.extracted.get('status') }}</p>
+  {% else %}
+  <p style="font-size:12.5px; color:var(--text-dim); margin: 4px 0 14px;">No screenshot on file — a bank credit didn't cleanly match this order (wrong amount, ambiguous total, or no credit yet).</p>
+  {% endif %}
+  <div style="display:flex; gap:8px;">
+    <form method="post" action="/admin/needs-attention/{{ it.order_id }}/approve">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit">Approve (I saw the credit)</button>
+    </form>
+    <form method="post" action="/admin/needs-attention/{{ it.order_id }}/reject">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="danger">Reject</button>
+    </form>
+  </div>
 </div>
 {% else %}
-<p>Nothing needs your attention right now.</p>
+<div class="empty-state">Nothing needs your attention right now.</div>
 {% endfor %}
 {% endblock %}

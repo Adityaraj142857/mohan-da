@@ -2,21 +2,45 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Owner login</title>
+<title>Owner login — ShopBot</title>
 <style>
-  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f5f6f8; }
-  form { background: white; padding: 24px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); width: 280px; }
-  input { width: 100%; padding: 10px; margin: 8px 0 14px; border: 1px solid #ccc; border-radius: 6px; }
-  button { width: 100%; padding: 10px; background: #1f6f43; color: white; border: none; border-radius: 6px; font-size: 15px; }
-  .error { color: #b23b3b; font-size: 13px; }
+  :root { --brand: #1f6f43; --brand-dark: #155232; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; margin: 0;
+    background: radial-gradient(circle at top, #eef6f1, #dbe7e0);
+  }
+  .card {
+    background: white; padding: 34px 30px; border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(16,24,20,0.12); width: 300px; text-align: center;
+  }
+  .logo {
+    width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 22px;
+  }
+  h3 { margin: 0 0 4px; font-size: 17px; }
+  p.hint { color: #6b7570; font-size: 12.5px; margin: 0 0 18px; }
+  input { width: 100%; padding: 11px 13px; margin: 4px 0 16px; border: 1px solid #e6e9e8; border-radius: 9px; font-size: 14px; text-align:center; }
+  input:focus { outline: 2px solid #e8f5ee; border-color: var(--brand); }
+  button {
+    width: 100%; padding: 11px; background: var(--brand); color: white;
+    border: none; border-radius: 9px; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  }
+  button:hover { background: var(--brand-dark); }
+  .error { color: #c0392b; font-size: 12.5px; margin: -6px 0 12px; }
 </style>
 </head>
 <body>
-<form method="post" action="/admin/login">
+<form class="card" method="post" action="/admin/login">
+  <div class="logo">🏪</div>
   <h3>Owner Console</h3>
+  <p class="hint">Enter your admin password to continue</p>
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
-  <label>Password</label>
-  <input type="password" name="password" autofocus required>
+  <input type="password" name="password" placeholder="Password" autofocus required>
   <button type="submit">Log in</button>
 </form>
 </body>

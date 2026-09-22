@@ -3,6 +3,16 @@
 **Decision in scope:** *"Should this order be marked PAID (and released for
 preparation), or does it need a human to look at it?"*
 
+**Scope note (read this first):** the graded artifact here is this one
+decision and the n8n pipeline that automates it — not the shop's entire
+ordering system. ShopBot (the larger app referenced throughout this report,
+with its menu parsing, WhatsApp-style chat, and owner console) exists as
+supporting infrastructure that makes this decision real and testable: it is
+what generates genuine orders with genuine payable amounts and genuine bank
+credits for the automation to act on, rather than a synthetic example built
+only for this assignment. The automation being evaluated is specifically
+the n8n workflow in `n8n_workflow.json` and the reasoning below.
+
 We deliberately scope the argument to this one decision — not the whole
 ordering workflow — because the assignment's own guidance is to test each
 decision against the six factors, and "confirm this specific payment" is
@@ -43,3 +53,55 @@ to say "please check this" the moment it can't. That asymmetry — quick to
 confirm, quick to defer — is the whole design, and it is what the working
 build (Section 3) implements as an n8n pipeline with an explicit
 human-in-the-loop checkpoint.
+
+## Guardrails: edge cases, low-confidence outputs, errors, and where a human checkpoint sits
+
+The assignment asks explicitly: *what happens on edge cases, low-confidence
+outputs, or errors, and where does a human still get a checkpoint?* Here is
+the exhaustive answer for this decision — every case below is implemented
+in code (`src/shopbot/verify/matcher.py`), covered by an automated test, and
+several are also run live through the n8n pipeline (`03_TEST_RESULTS.md`):
+
+| Situation | Confidence | Automated action |
+|---|---|---|
+| Bank credit exactly matches one pending order's payable amount, within its payment window | High — exact, authoritative match | **Auto-confirm.** No human involved. |
+| Two pending orders happen to share the same amount | Ambiguous — evidence can't disambiguate | **Escalate.** Both flagged `NEEDS_OWNER`, shown side by side for the owner to pick. |
+| Credit amount is lower than the order (underpaid) or higher by more than the configured tolerance (overpaid) | Low — evidence contradicts the order | **Escalate**, with the expected vs. received amount shown. Never auto-confirm a partial or excessive payment. |
+| Credit arrives after the order's payment window has expired, but within a short grace period | Ambiguous — could be a late-but-genuine payment or an unrelated credit | **Escalate** as "late payment"; never silently re-activates an expired order. |
+| Same UTR (bank transaction reference) already matched to a different order | High confidence of **fraud**, not of payment | **Escalate** and increment a fraud-flag counter on the customer; never auto-confirm. |
+| Same screenshot image (or a near-duplicate) already used on another order | High confidence of fraud | **Reject the claim outright** and flag for fraud review; screenshot alone was never going to confirm payment anyway. |
+| SMS forwarder goes offline (no credits arriving at all) | No evidence, not even low-confidence | **Escalate everything** — nothing is ever marked paid by default/timeout. The owner is separately alerted if no heartbeat is seen during open hours. |
+| Bank SMS is noise (OTP, promotional, or a debit rather than a credit) | Not applicable — not a payment signal at all | **Ignored** for matching purposes, but still logged for audit; never treated as evidence either way. |
+| `BANK_SIGNAL=none` (forwarder not configured yet) | No automatic evidence available at all | **Every payment escalates to the owner by default** — this is the safe fallback configuration for a shop that hasn't set up bank-SMS forwarding yet. |
+| A screenshot's own checks look strong (right amount, right payee, UTR present, not a duplicate) but no bank credit has arrived yet | Medium — plausible but not yet confirmed | **Pending, not confirmed.** Customer is told "waiting for bank confirmation"; escalates to the owner automatically after a configurable timeout if the bank credit still hasn't shown up. |
+
+**The single rule that ties all of this together:** the system will only ever
+write `PAID` for one of two reasons — (a) a bank credit that is an *exact*
+amount match within the payment window, or (b) an explicit, audited owner
+action. Every other situation, by construction, routes to a human. This
+isn't an assertion — `tests/unit/test_paid_invariant.py` in the codebase
+greps the entire source tree and fails the build if any code path other
+than those two ever sets an order's status to `PAID`.
+
+## Rough business case (order-of-magnitude, not measured)
+
+These are *deliberately labelled estimates*, not data collected from
+Mohan-da — see `docs/OWNER_TODO.md` for the two-minute conversation that
+would replace them with real numbers before this ships to real customers.
+They're included so the argument isn't purely qualitative.
+
+| Quantity | Rough estimate | Basis |
+|---|---|---|
+| Manual payment-check time today | ~1–2 minutes/order (open bank app or ask a relative to check, cross-reference amount, reply to customer) | Typical for a manual bank-statement cross-check on a phone |
+| Orders/day (assumed, hostel tuck shop) | ~30–60 | Order-of-magnitude for a single-shop hostel tuck counter; not measured |
+| Time saved/day if ~90% of orders auto-confirm | ~30–90 minutes/day | (30–60 orders × 90%) × ~1–2 min saved per auto-confirmed order |
+| Cost of one missed fake-payment incident | Full cost of the order's ingredients + prep time, unrecovered | The entire reason bank-evidence (not screenshots) gates `PAID` |
+| Cost of the automation itself | ₹0 recurring (self-hosted n8n, free bank-SMS forwarder app, no paid LLM in the default path) | Matches SPEC constraint C1/C2 — the shop's whole reason for wanting this |
+
+The precise numbers matter less than the shape of the argument: the
+manual step being automated is small-but-frequent (multiplies into real
+time saved daily), the failure mode being guarded against is rare-but-costly
+(justifies keeping a human checkpoint rather than skipping verification
+entirely), and the automation itself adds no recurring cost — which is why
+a hybrid, rather than "do nothing" or "automate blindly," is the right
+answer for this specific shop.

@@ -13,7 +13,7 @@
       "name": "1. Ingest: Bank SMS Forwarder",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-140, 240],
+      "position": [-380, 240],
       "webhookId": "mohandas-payment-decision"
     },
     {
@@ -31,13 +31,23 @@
         "jsonBody": "={{ JSON.stringify($json.body) }}",
         "options": { "response": { "response": { "responseFormat": "json" } } }
       },
-      "id": "http-analyze-decide",
-      "name": "2. Analyze + Decide (ShopBot matcher)",
+      "id": "http-evidence",
+      "name": "2. Evidence: Ask ShopBot's Matcher",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [100, 240],
+      "position": [-140, 240],
       "retryOnFail": true,
       "maxTries": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// 3. Risk / Decision step: turns raw evidence (ShopBot's ingest\n// status + whether a matched order came back) into a labelled\n// confidence score. This is the pipeline's own \"reasoning\" step,\n// kept separate from evidence-gathering (node 2) and from\n// acting/notifying (nodes 4a/4b) so each node has one clear role\n// (evidence -> risk/decision -> act), matching how a role-based\n// agent pipeline is described in the assignment brief.\nconst evidence = $input.item.json;\nconst matched = !!evidence.matched_order;\nconst ingestStatus = evidence.status || 'unknown';\n\nlet confidence = 0;\nlet reason = '';\n\nif (matched) {\n  // ShopBot only ever returns matched_order when a bank credit was an\n  // EXACT amount match within the order's payment window (see\n  // verify/matcher.py::on_new_credit). There is no partial-confidence\n  // auto-confirm path by design (SPEC 3.1) -- exact evidence only.\n  confidence = 100;\n  reason = 'Bank credit exactly matched a pending order\\'s payable amount within its payment window.';\n} else if (ingestStatus === 'duplicate') {\n  confidence = 50;\n  reason = 'This exact SMS was already processed once (forwarder retry or resend) -- safe no-op, not new evidence.';\n} else if (ingestStatus === 'stored') {\n  confidence = 10;\n  reason = 'A real bank credit was recorded, but it did not exactly match any pending order (wrong amount, no pending order, or already expired).';\n} else if (ingestStatus === 'ignored') {\n  confidence = 0;\n  reason = 'Not a payment signal at all (OTP, promotional text, or a debit) -- ignored for matching, never treated as evidence.';\n} else {\n  confidence = 0;\n  reason = 'Unrecognised evidence shape from ShopBot -- treated as no evidence.';\n}\n\nconst CONFIDENCE_THRESHOLD = 100; // only exact matches auto-confirm; see docs/assignment/02_AUTOMATION_ARGUMENT.md\n\nreturn [{\n  json: {\n    ...evidence,\n    confidence,\n    confidence_reason: reason,\n    auto_confirm: confidence >= CONFIDENCE_THRESHOLD\n  }\n}];"
+      },
+      "id": "risk-decision",
+      "name": "3. Risk/Decision: Score Confidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [100, 240]
     },
     {
       "parameters": {
@@ -45,10 +55,10 @@
           "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
           "conditions": [
             {
-              "id": "cond-matched",
-              "leftValue": "={{ $json.matched_order }}",
-              "rightValue": "",
-              "operator": { "type": "string", "operation": "notEmpty" }
+              "id": "cond-auto-confirm",
+              "leftValue": "={{ $json.auto_confirm }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
             }
           ],
           "combinator": "and"
@@ -56,7 +66,7 @@
         "options": {}
       },
       "id": "if-matched",
-      "name": "3. Decision: Bank Credit Matched?",
+      "name": "4. Branch: Auto-confirm or Escalate?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [340, 240]
@@ -69,13 +79,14 @@
             { "id": "a2", "name": "order_code", "type": "string", "value": "={{ $json.matched_order }}" },
             { "id": "a3", "name": "human_checkpoint", "type": "boolean", "value": false },
             { "id": "a4", "name": "action_taken", "type": "string", "value": "Order marked PAID; customer notified automatically: 'Payment received ✅'. Owner's live board updated." },
-            { "id": "a5", "name": "evidence", "type": "string", "value": "Bank's own credit SMS matched this order's exact payable amount within its payment window (UTR-verified where available)." }
+            { "id": "a5", "name": "evidence", "type": "string", "value": "={{ $json.confidence_reason }}" },
+            { "id": "a6", "name": "confidence", "type": "number", "value": "={{ $json.confidence }}" }
           ]
         },
         "options": {}
       },
       "id": "set-auto-confirmed",
-      "name": "4a. Act: Auto-confirm + notify",
+      "name": "5a. Act: Auto-confirm + notify",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [580, 120]
@@ -88,13 +99,15 @@
             { "id": "b2", "name": "order_code", "type": "string", "value": "={{ $json.matched_order || null }}" },
             { "id": "b3", "name": "human_checkpoint", "type": "boolean", "value": true },
             { "id": "b4", "name": "action_taken", "type": "string", "value": "No safe automatic match. Flagged in the owner's Needs-Attention queue and an owner alert was sent (console/Telegram). A human decides next, per the automation argument's human-in-the-loop boundary." },
-            { "id": "b5", "name": "ingest_status", "type": "string", "value": "={{ $json.status }}" }
+            { "id": "b5", "name": "ingest_status", "type": "string", "value": "={{ $json.status }}" },
+            { "id": "b6", "name": "confidence", "type": "number", "value": "={{ $json.confidence }}" },
+            { "id": "b7", "name": "confidence_reason", "type": "string", "value": "={{ $json.confidence_reason }}" }
           ]
         },
         "options": {}
       },
       "id": "set-escalated",
-      "name": "4b. Act: Escalate to human",
+      "name": "5b. Act: Escalate to human",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [580, 360]
@@ -106,7 +119,7 @@
         "options": {}
       },
       "id": "respond-confirmed",
-      "name": "5a. Respond: confirmed",
+      "name": "6a. Respond: confirmed",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [820, 120]
@@ -118,7 +131,7 @@
         "options": {}
       },
       "id": "respond-escalated",
-      "name": "5b. Respond: escalated",
+      "name": "6b. Respond: escalated",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [820, 360]
@@ -126,22 +139,25 @@
   ],
   "connections": {
     "1. Ingest: Bank SMS Forwarder": {
-      "main": [[{ "node": "2. Analyze + Decide (ShopBot matcher)", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "2. Evidence: Ask ShopBot's Matcher", "type": "main", "index": 0 }]]
     },
-    "2. Analyze + Decide (ShopBot matcher)": {
-      "main": [[{ "node": "3. Decision: Bank Credit Matched?", "type": "main", "index": 0 }]]
+    "2. Evidence: Ask ShopBot's Matcher": {
+      "main": [[{ "node": "3. Risk/Decision: Score Confidence", "type": "main", "index": 0 }]]
     },
-    "3. Decision: Bank Credit Matched?": {
+    "3. Risk/Decision: Score Confidence": {
+      "main": [[{ "node": "4. Branch: Auto-confirm or Escalate?", "type": "main", "index": 0 }]]
+    },
+    "4. Branch: Auto-confirm or Escalate?": {
       "main": [
-        [{ "node": "4a. Act: Auto-confirm + notify", "type": "main", "index": 0 }],
-        [{ "node": "4b. Act: Escalate to human", "type": "main", "index": 0 }]
+        [{ "node": "5a. Act: Auto-confirm + notify", "type": "main", "index": 0 }],
+        [{ "node": "5b. Act: Escalate to human", "type": "main", "index": 0 }]
       ]
     },
-    "4a. Act: Auto-confirm + notify": {
-      "main": [[{ "node": "5a. Respond: confirmed", "type": "main", "index": 0 }]]
+    "5a. Act: Auto-confirm + notify": {
+      "main": [[{ "node": "6a. Respond: confirmed", "type": "main", "index": 0 }]]
     },
-    "4b. Act: Escalate to human": {
-      "main": [[{ "node": "5b. Respond: escalated", "type": "main", "index": 0 }]]
+    "5b. Act: Escalate to human": {
+      "main": [[{ "node": "6b. Respond: escalated", "type": "main", "index": 0 }]]
     }
   },
   "settings": { "executionOrder": "v1" }

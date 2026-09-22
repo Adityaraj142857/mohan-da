@@ -5,43 +5,178 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}ShopBot{% endblock %}</title>
 <style>
-  :root { color-scheme: light; }
+  :root {
+    color-scheme: light;
+    --brand: #1f6f43;
+    --brand-dark: #155232;
+    --brand-light: #e8f5ee;
+    --bg: #f4f6f5;
+    --panel: #ffffff;
+    --border: #e6e9e8;
+    --text: #16201b;
+    --text-dim: #6b7570;
+    --danger: #c0392b;
+    --danger-light: #fbe9e7;
+    --warn: #b8860b;
+    --warn-light: #fdf3d0;
+    --shadow: 0 1px 2px rgba(16, 24, 20, 0.06), 0 1px 12px rgba(16, 24, 20, 0.04);
+    --radius: 12px;
+  }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #f5f6f8; color: #1a1a1a; }
-  header { background: #1f6f43; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-  header a { color: white; text-decoration: none; margin-right: 12px; font-size: 14px; }
-  main { padding: 16px; max-width: 1100px; margin: 0 auto; }
-  .card { background: white; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .cols { display: flex; gap: 12px; overflow-x: auto; }
-  .col { flex: 1; min-width: 220px; }
-  .col h3 { font-size: 14px; text-transform: uppercase; color: #555; }
-  button, input[type=submit] { background: #1f6f43; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  button.secondary { background: #999; }
-  button.danger { background: #b23b3b; }
-  input[type=text], input[type=password], textarea, select { width: 100%; padding: 8px; margin: 4px 0 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-  table { width: 100%; border-collapse: collapse; background: white; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eee; }
-  .badge.pass { background: #d7f5df; color: #146c2e; }
-  .badge.fail { background: #fbdada; color: #9b1c1c; }
-  .badge.unknown { background: #fdf3d0; color: #8a6d1e; }
-  nav.tabs { margin-bottom: 12px; }
-  nav.tabs a { margin-right: 14px; font-weight: 600; color: #1f6f43; text-decoration: none; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* --- sidebar --- */
+  .sidebar {
+    width: 232px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .brand {
+    padding: 20px 18px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand .logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; flex-shrink: 0;
+  }
+  .brand .name { font-weight: 700; font-size: 15px; line-height: 1.2; }
+  .brand .sub { font-size: 11.5px; color: var(--text-dim); }
+
+  nav.side-nav { flex: 1; padding: 10px; overflow-y: auto; }
+  nav.side-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  nav.side-nav a .ico { width: 18px; text-align: center; font-size: 15px; }
+  nav.side-nav a:hover { background: var(--brand-light); }
+  nav.side-nav a.active { background: var(--brand); color: white; }
+  nav.side-nav .divider { height: 1px; background: var(--border); margin: 10px 4px; }
+  nav.side-nav .section-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 10px 12px 4px; }
+
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .sidebar-footer form { margin: 0; }
+  .sidebar-footer button {
+    width: 100%; background: none; color: var(--text-dim); border: 1px solid var(--border);
+    padding: 7px; border-radius: 8px; font-size: 12.5px; cursor: pointer;
+  }
+  .sidebar-footer button:hover { background: var(--bg); }
+
+  /* --- main content --- */
+  main { flex: 1; padding: 28px 32px; max-width: 1200px; min-width: 0; overflow-x: hidden; }
+  .page-title { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  .page-subtitle { color: var(--text-dim); font-size: 13.5px; margin: 0 0 22px; }
+
+  .card {
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .card h3 { margin-top: 0; font-size: 14px; }
+
+  .cols { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 4px; }
+  .col { flex: 1; min-width: 240px; }
+  .col-header {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text-dim); font-weight: 700; padding: 4px 4px 10px;
+  }
+  .col-header .count {
+    background: var(--brand-light); color: var(--brand-dark);
+    border-radius: 20px; padding: 1px 8px; font-size: 11.5px;
+  }
+
+  button, input[type=submit] {
+    background: var(--brand); color: white; border: none;
+    padding: 9px 15px; border-radius: 8px; cursor: pointer;
+    font-size: 13.5px; font-weight: 600; transition: background 0.15s;
+  }
+  button:hover { background: var(--brand-dark); }
+  button.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover { background: var(--bg); }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: #a5311f; }
+
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; padding: 9px 11px; margin: 4px 0 10px;
+    border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px;
+    background: var(--panel); color: var(--text);
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--brand-light); border-color: var(--brand); }
+  label { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-dim); background: var(--bg); }
+  tr:last-child td { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600; background: var(--bg); color: var(--text-dim); }
+  .badge.pass { background: var(--brand-light); color: var(--brand-dark); }
+  .badge.fail { background: var(--danger-light); color: var(--danger); }
+  .badge.unknown { background: var(--warn-light); color: var(--warn); }
+
+  .empty-state { text-align: center; padding: 28px 12px; color: var(--text-dim); font-size: 13px; }
 </style>
 </head>
 <body>
-<header>
-  <div><strong>{{ request.app.state.settings.shop_name }}</strong> — Owner Console</div>
-  <div>
-    <a href="/admin">Board</a>
-    <a href="/admin/needs-attention">Needs attention</a>
-    <a href="/admin/credits">Credits</a>
-    <a href="/admin/menu">Menu</a>
-    <a href="/admin/customers">Customers</a>
-    <a href="/admin/reports">Reports</a>
-    <a href="/sim">Simulator</a>
+{% set nav_items = [
+  ("/admin", "🧾", "Board"),
+  ("/admin/needs-attention", "🚩", "Needs attention"),
+  ("/admin/credits", "🏦", "Credits"),
+  ("/admin/menu", "📋", "Menu"),
+  ("/admin/customers", "👥", "Customers"),
+  ("/admin/reports", "📊", "Reports"),
+] %}
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo">{{ request.app.state.settings.shop_name[0]|upper }}</div>
+    <div>
+      <div class="name">{{ request.app.state.settings.shop_name }}</div>
+      <div class="sub">Owner Console</div>
+    </div>
   </div>
-</header>
+  <nav class="side-nav">
+    {% for href, icon, label in nav_items %}
+    <a href="{{ href }}" class="{{ 'active' if request.url.path == href }}"><span class="ico">{{ icon }}</span>{{ label }}</a>
+    {% endfor %}
+    <div class="divider"></div>
+    <div class="section-label">Demo</div>
+    <a href="/sim"><span class="ico">💬</span>Simulator</a>
+  </nav>
+  <div class="sidebar-footer">
+    <form method="post" action="/admin/logout">
+      <button type="submit">Log out</button>
+    </form>
+  </div>
+</aside>
 <main>
 {% block content %}{% endblock %}
 </main>

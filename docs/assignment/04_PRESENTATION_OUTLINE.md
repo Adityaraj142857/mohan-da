@@ -33,15 +33,30 @@ checkpoint** — not "automate everything" or "automate nothing."
 - The decision engine itself is ShopBot — a working payment/ordering system
   built for this shop, with 130 passing automated tests, so the pipeline
   isn't calling a toy/mock — it's calling tested, real logic.
-- Show the n8n canvas: Ingest → Analyze/Decide → IF → Act (confirm) / Act
-  (escalate) → Respond.
+- Show the n8n canvas: Ingest → Evidence → Risk/Decision (confidence score)
+  → Branch → Act (confirm) / Act (escalate) → Respond.
 
 ### 5. Test results (1 slide)
-7 live test cases run through the actual pipeline (not hand-waved):
-exact match ×3 (including two same-priced orders staying distinct),
-wrong amount, OTP noise, duplicate SMS retry, debit SMS. All matched the
-argument's predicted behaviour: confirm only the clean case, escalate
-everything else, never a false PAID. *(Full table: `03_TEST_RESULTS.md`)*
+13 live test cases run through the actual pipeline (not hand-waved):
+exact match ×4, wrong amount, overpay, OTP/promo noise ×2, duplicate SMS
+retry, debit SMS, plus the confidence-scoring upgrade re-verified on both
+branches. Zero wrong calls across all of them (see the confusion matrix in
+`03_TEST_RESULTS.md`) — confirm only the clean case, escalate everything
+else, never a false PAID.
+
+### Screen recording (record this, ~2-3 minutes, before submission)
+1. `/sim` — place an order as a demo customer, confirm it, see the pay QR.
+2. n8n — send a matching bank-SMS webhook call, show the execution log:
+   Ingest → Evidence → Risk/Decision (confidence: 100) → Act (auto-confirm).
+3. `/sim` again — the "Payment received ✅" message arriving live; `/admin`
+   board showing the order under PAID.
+4. n8n — send a **mismatched** amount instead, show confidence dropping and
+   the branch going to Escalate.
+5. `/admin/needs-attention` — the escalated order sitting there for the
+   owner to approve/reject by hand.
+That sequence alone demonstrates ingestion, reasoning, autonomous action,
+and the human-in-the-loop checkpoint — the whole automation argument in
+one take.
 
 ### 6. What we'd do differently at scale (1 slide, optional)
 - Real bank SMS forwarder app instead of a simulated webhook payload.

@@ -23,3 +23,6 @@ backups/
 # the workflow definition itself lives in docs/assignment/n8n_workflow.json
 .n8n/
 
+# start.sh's PID files and logs for the background-launched processes
+.run/
+

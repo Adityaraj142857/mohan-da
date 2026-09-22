@@ -88,12 +88,13 @@
   .row.out { justify-content: flex-end; }
   .row.in { justify-content: flex-start; }
   .bubble {
-    max-width: 65%;
+    max-width: min(65%, 420px);
     padding: 6px 9px 8px;
     border-radius: 8px;
     font-size: 14.2px;
     line-height: 1.35;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     word-wrap: break-word;
     box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
     position: relative;

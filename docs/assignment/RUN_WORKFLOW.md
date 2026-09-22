@@ -15,6 +15,16 @@ npm install -g n8n
 
 ## Start everything
 
+The single command below starts **both** ShopBot and n8n in the background
+and opens your browser — this is the recommended way:
+```bash
+bash start.sh
+```
+`bash start.sh status` shows what's running; `bash start.sh stop` stops both.
+
+If you'd rather run them manually in two terminals (e.g. to watch each
+one's logs directly):
+
 **Terminal 1 — ShopBot** (the decision engine + order data):
 ```bash
 cd /Users/arshukla/Documents/Projects/small_scale_payment

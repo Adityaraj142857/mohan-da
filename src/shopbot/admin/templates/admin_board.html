@@ -1,26 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Board — ShopBot{% endblock %}
 {% block content %}
-<h2>Live board</h2>
+<h1 class="page-title">Live board</h1>
+<p class="page-subtitle">Orders move left to right as you mark them ready and dispatched.</p>
 <div class="cols">
   {% for status, orders in columns.items() %}
   <div class="col">
-    <h3>{{ status }} ({{ orders|length }})</h3>
+    <div class="col-header">
+      <span>{{ status.replace('_', ' ')|title }}</span>
+      <span class="count">{{ orders|length }}</span>
+    </div>
     {% for o in orders %}
-    <div class="card">
-      <strong>{{ o.code }}</strong> — {{ o.amount }}<br>
-      {{ o.line_items|join(', ') }}<br>
-      {% if o.fulfilment == 'delivery' %}🚴 {{ o.hostel }} {{ o.room }}{% else %}🏬 Takeout{% endif %}<br>
-      <small>{{ o.customer }}</small>
+    <div class="card" style="margin-bottom:10px; padding:14px 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <strong style="font-size:15px;">{{ o.code }}</strong>
+        <strong style="font-size:15px; color:var(--brand-dark);">{{ o.amount }}</strong>
+      </div>
+      <div style="font-size:13px; color:var(--text-dim); margin:6px 0;">{{ o.line_items|join(', ') }}</div>
+      <div style="font-size:12.5px; margin-bottom:8px;">
+        {% if o.fulfilment == 'delivery' %}🚴 {{ o.hostel }} {{ o.room }}{% else %}🏬 Takeout{% endif %}
+        &nbsp;·&nbsp; <span style="color:var(--text-dim);">{{ o.customer }}</span>
+      </div>
       {% if o.next_status %}
-      <form method="post" action="/admin/orders/{{ o.id }}/advance" style="margin-top:8px;">
+      <form method="post" action="/admin/orders/{{ o.id }}/advance">
         <input type="hidden" name="csrf" value="{{ csrf }}">
-        <button type="submit">Mark {{ o.next_status }}</button>
+        <button type="submit" style="width:100%;">Mark {{ o.next_status.replace('_', ' ')|title }}</button>
       </form>
       {% endif %}
     </div>
     {% else %}
-    <p><small>Nothing here.</small></p>
+    <div class="empty-state">Nothing here yet.</div>
     {% endfor %}
   </div>
   {% endfor %}

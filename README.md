@@ -26,27 +26,32 @@ Build notes: [`PLAN.md`](PLAN.md), deviations from the spec:
 6. You get a live order board, a "needs attention" queue for anything
    ambiguous, and daily reports — all in a browser on your own machine.
 
-## Quick start (demo, no accounts needed)
+## Quick start (one command)
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -e .
-cp .env.example .env             # edit later with your real menu/UPI ID
-python -m shopbot demo           # replays a scripted day, prints pass/fail
-python -m shopbot run            # starts the app
+bash start.sh
 ```
 
-Then open:
+This single script does everything: sets up the virtual environment on
+first run, starts ShopBot **and** the n8n automation pipeline in the
+background (they keep running after you close the terminal), and opens
+your browser straight to the simulator. Check on them any time with
+`bash start.sh status`, and stop everything with `bash start.sh stop`.
+Windows users: `scripts\run.bat` does the ShopBot half of this (n8n setup
+is a separate manual step on Windows — see `docs/assignment/RUN_WORKFLOW.md`).
+
+Once it's open:
 - **http://127.0.0.1:8000/sim** — a WhatsApp-like chat simulator. Place an
   order, confirm it, then use the "Bank SMS injector" at the bottom to
   paste a fake bank credit SMS and watch the order flip to paid.
-- **http://127.0.0.1:8000/admin** — the owner console (password from
-  `ADMIN_PASSWORD` in `.env`). Live board, needs-attention queue, bank
-  credits, menu editor, customers, reports.
+- **http://127.0.0.1:8000/admin** — the owner console (password printed by
+  `start.sh`, also in `.env` as `ADMIN_PASSWORD`). Live board,
+  needs-attention queue, bank credits, menu editor, customers, reports.
+- **http://localhost:5678** — the n8n automation pipeline (course
+  assignment deliverable), if Node.js/n8n are installed.
 
-`run.sh` (macOS/Linux) and `run.bat` (Windows) do the same three steps
-(create venv, install, run) in one command.
+Prefer to run things manually instead? See `python -m shopbot run` in
+`docs/DEPLOY_FREE.md` / `docs/GO_LIVE.md` for the underlying commands.
 
 ## Setting it up for your real shop
 
