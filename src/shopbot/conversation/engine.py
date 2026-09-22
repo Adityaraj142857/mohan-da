@@ -152,6 +152,24 @@ class ConversationEngine:
         norm = normalize_text(raw_text)
         context = dict(conv.context or {})
 
+        # Developer-only testing bypass: sending this exact keyword lets this
+        # one customer conversation order at any time, ignoring OPEN_HOURS.
+        # Not a SPEC feature — purely so the app can be sanity-checked
+        # outside business hours during development. Never advertised to
+        # real customers; has no effect on pricing, payment, or any other
+        # rule. See DEV_BYPASS_KEYWORD.
+        if norm == st.DEV_BYPASS_KEYWORD:
+            context["dev_bypass_hours"] = True
+            self._save_conv(conv, conv.state, context)
+            return EngineResult(
+                messages=[
+                    Outbound(
+                        kind="text",
+                        text="🛠 Dev mode: open-hours check disabled for this chat. Order normally now.",
+                    )
+                ]
+            )
+
         # Human handoff pause: if active and not expired, bot stays silent except for explicit commands.
         human_until = context.get("human_until")
         if human_until:
@@ -162,7 +180,7 @@ class ConversationEngine:
         if norm in st.GLOBAL_COMMANDS:
             return self._handle_global_command(session, conv, customer, context, norm)
 
-        if not is_open_now(self.settings.open_hours, to_ist(self.clock.now())):
+        if not context.get("dev_bypass_hours") and not is_open_now(self.settings.open_hours, to_ist(self.clock.now())):
             self._log_outbound(session, wa_id, "out_of_hours")
             self._save_conv(conv, conv.state, context)
             return EngineResult(

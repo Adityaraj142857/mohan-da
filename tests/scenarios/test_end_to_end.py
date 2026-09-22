@@ -194,6 +194,16 @@ def test_9_ambiguous_unknown_add_remove_notes_out_of_hours_blocked_dup(h):
     texts_closed = h_closed.channel.sent_texts("wa-9c")
     assert any("closed" in t.lower() for t in texts_closed)
 
+    # dev bypass keyword: scoped to the one conversation that sends it
+    h_closed.send_text("wa-9c", "adityaorder")
+    h_closed.send_text("wa-9c", "1 tea")
+    texts_bypassed = h_closed.channel.sent_texts("wa-9c")
+    assert any("subtotal" in t.lower() for t in texts_bypassed)
+    # a different customer in the same shop is still blocked
+    h_closed.send_text("wa-9e", "1 tea")
+    texts_other = h_closed.channel.sent_texts("wa-9e")
+    assert any("closed" in t.lower() for t in texts_other)
+
     # blocked customer
     with h.db.session() as session:
         from shopbot.orders.service import get_or_create_customer

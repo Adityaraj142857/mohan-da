@@ -12,6 +12,11 @@ DONE = "DONE"
 
 GLOBAL_COMMANDS = {"menu", "cancel", "status", "help", "repeat", "human"}
 
+# Developer-only testing keyword (not a SPEC feature, not advertised to
+# customers): sending this exact word lets that one conversation bypass
+# OPEN_HOURS, so the app can be sanity-checked at any time of day.
+DEV_BYPASS_KEYWORD = "adityaorder"
+
 AFFIRMATIVES = {"yes", "y", "ok", "okay", "confirm", "confirmed", "haan", "hoyeche", "ha", "sure"}
 NEGATIVES = {"no", "n", "cancel", "nah", "na"}
 

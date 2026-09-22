@@ -24,6 +24,17 @@ That's the only script you need — `scripts/demo.sh` and `scripts/run.sh` were 
 | n8n | http://localhost:5678 | ✅ running via `start.sh` |
 | Public tunnel | — | ❌ off — the free Cloudflare tunnel was unreliable; ShopBot runs in QR-image mode instead (no external dependency) |
 
+## Developer testing bypass
+
+Send the exact word **`adityaorder`** as a message to any customer
+conversation (in `/sim`, or later real WhatsApp) to disable the
+`OPEN_HOURS` check for that one conversation only — useful for testing the
+app outside business hours. Scoped per-conversation (other customers are
+still correctly blocked), has zero effect on pricing/payment/any other
+rule, and is not mentioned anywhere customer-facing. Implemented in
+`conversation/engine.py` / `conversation/states.py::DEV_BYPASS_KEYWORD`,
+covered by a test in `tests/scenarios/test_end_to_end.py`.
+
 ## What changed in this session
 
 1. **Rubric-weighted improvements to the assignment deliverables:**
