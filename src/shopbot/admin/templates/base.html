@@ -148,12 +148,18 @@
 </head>
 <body>
 {% set nav_items = [
-  ("/admin", "🧾", "Board"),
-  ("/admin/needs-attention", "🚩", "Needs attention"),
+  ("/admin", "📊", "Dashboard"),
+  ("/admin/board", "🧾", "Live Board"),
+  ("/admin/needs-attention", "🚩", "Needs Attention"),
   ("/admin/credits", "🏦", "Credits"),
+] %}
+{% set nav_items2 = [
   ("/admin/menu", "📋", "Menu"),
   ("/admin/customers", "👥", "Customers"),
-  ("/admin/reports", "📊", "Reports"),
+  ("/admin/inventory", "📦", "Inventory"),
+  ("/admin/recommendations", "💡", "Recommendations"),
+  ("/admin/reports", "📈", "Reports"),
+  ("/admin/daily-summary", "📝", "Daily Summary"),
 ] %}
 <aside class="sidebar">
   <div class="brand">
@@ -164,7 +170,13 @@
     </div>
   </div>
   <nav class="side-nav">
+    <div class="section-label">Operations</div>
     {% for href, icon, label in nav_items %}
+    <a href="{{ href }}" class="{{ 'active' if request.url.path == href }}"><span class="ico">{{ icon }}</span>{{ label }}</a>
+    {% endfor %}
+    <div class="divider"></div>
+    <div class="section-label">Business Intelligence</div>
+    {% for href, icon, label in nav_items2 %}
     <a href="{{ href }}" class="{{ 'active' if request.url.path == href }}"><span class="ico">{{ icon }}</span>{{ label }}</a>
     {% endfor %}
     <div class="divider"></div>

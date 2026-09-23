@@ -3,15 +3,27 @@
 {% block content %}
 <h2>Customers</h2>
 <table>
-  <tr><th>WhatsApp ID</th><th>Orders</th><th>Fraud flags</th><th>Blocked</th><th></th></tr>
+  <tr>
+    <th>WhatsApp ID</th>
+    <th>Segment</th>
+    <th>Orders</th>
+    <th>Total Spend</th>
+    <th>Last Order</th>
+    <th>Favourite Item</th>
+    <th>Blocked</th>
+    <th></th>
+  </tr>
   {% for c in customers %}
   <tr>
-    <td>{{ c.wa_id }}</td>
-    <td>{{ c.orders }}</td>
-    <td>{{ c.fraud_flags }}</td>
+    <td><a href="/admin/customers/{{ c.customer_id }}" style="font-weight:600">{{ c.wa_id }}</a></td>
+    <td><span class="badge" style="background:var(--bg);color:var(--text-dim)">{{ c.segment }}</span></td>
+    <td>{{ c.total_orders }}</td>
+    <td>{{ c.total_spend_display }}<br><span style="font-size:11px;color:var(--text-dim)">AOV: {{ c.aov_display }}</span></td>
+    <td>{{ c.last_order_date }}</td>
+    <td>{{ c.favourite_item or '-' }}</td>
     <td>{{ 'Yes' if c.blocked else 'No' }}</td>
     <td>
-      <form method="post" action="/admin/customers/{{ c.id }}/block">
+      <form method="post" action="/admin/customers/{{ c.customer_id }}/block">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <button type="submit" class="{{ 'secondary' if c.blocked else 'danger' }}">{{ 'Unblock' if c.blocked else 'Block' }}</button>
       </form>

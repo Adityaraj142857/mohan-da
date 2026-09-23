@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ShopBot{% endblock %}
+{% block content %}
+<style>
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+  .kpi-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: var(--brand-dark); line-height: 1; }
+  .kpi-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  .kpi-card.warn .kpi-value { color: var(--warn); }
+  .kpi-card.danger .kpi-value { color: var(--danger); }
+
+  .section-header { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); margin: 22px 0 10px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  .rank-list { list-style: none; padding: 0; margin: 0; }
+  .rank-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .rank-list li:last-child { border-bottom: none; }
+  .rank-num { width: 24px; height: 24px; border-radius: 50%; background: var(--brand-light); color: var(--brand-dark); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .rank-name { flex: 1; }
+  .rank-meta { font-size: 12px; color: var(--text-dim); text-align: right; }
+
+  .peak-bar-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 13px; }
+  .peak-label { width: 110px; flex-shrink: 0; font-size: 12px; }
+  .peak-bar-bg { flex: 1; background: var(--bg); border-radius: 4px; height: 14px; overflow: hidden; }
+  .peak-bar-fill { background: var(--brand); height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .peak-count { width: 40px; text-align: right; font-size: 12px; color: var(--text-dim); }
+
+  .alert-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; }
+  .alert-row.low { background: var(--warn-light); color: var(--warn); }
+  .alert-row.critical { background: var(--danger-light); color: var(--danger); }
+  .alert-row.ok { background: var(--brand-light); color: var(--brand-dark); }
+  .alert-row + .alert-row { margin-top: 6px; }
+
+  .cross-sell-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .cross-sell-row:last-child { border-bottom: none; }
+  .conf-badge { background: var(--brand-light); color: var(--brand-dark); border-radius: 20px; padding: 2px 8px; font-size: 11.5px; font-weight: 600; }
+</style>
+
+<h1 class="page-title">Business Dashboard</h1>
+<p class="page-subtitle">{{ kpi.date_label }} · Real-time data from the order database</p>
+
+<!-- KPI Row -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Orders Today</div>
+    <div class="kpi-value">{{ kpi.total_orders }}</div>
+    <div class="kpi-sub">{{ kpi.paid_orders }} paid</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Revenue</div>
+    <div class="kpi-value">{{ kpi.revenue_display }}</div>
+    <div class="kpi-sub">Paid orders only</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Avg Order Value</div>
+    <div class="kpi-value">{{ kpi.aov_display }}</div>
+    <div class="kpi-sub">Per paid order</div>
+  </div>
+  <div class="kpi-card {% if kpi.pending_orders > 0 %}warn{% endif %}">
+    <div class="kpi-label">Pending Payment</div>
+    <div class="kpi-value">{{ kpi.pending_orders }}</div>
+    <div class="kpi-sub">Awaiting payment</div>
+  </div>
+  <div class="kpi-card {% if kpi.payment_exceptions > 0 %}danger{% endif %}">
+    <div class="kpi-label">Exceptions</div>
+    <div class="kpi-value">{{ kpi.payment_exceptions }}</div>
+    <div class="kpi-sub">Needs attention</div>
+  </div>
+  <div class="kpi-card {% if kpi.unmatched_credits > 0 %}warn{% endif %}">
+    <div class="kpi-label">Unmatched Credits</div>
+    <div class="kpi-value">{{ kpi.unmatched_credits }}</div>
+    <div class="kpi-sub">Review credits</div>
+  </div>
+</div>
+
+<!-- Sales Performance + Peak Hours -->
+<div class="two-col">
+  <div class="card">
+    <h3>🏆 Top Selling Items Today</h3>
+    {% if top_today %}
+    <ul class="rank-list">
+      {% for p in top_today %}
+      <li>
+        <span class="rank-num">{{ p.rank }}</span>
+        <span class="rank-name">{{ p.name }}</span>
+        <span class="rank-meta">{{ p.qty_sold }} sold · {{ p.revenue_display }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p style="font-size:12px;color:var(--text-dim);margin:12px 0 0;"><a href="/admin/reports">See 7-day data →</a></p>
+    {% else %}
+    <div class="empty-state">No paid orders today yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>⏱ Peak Ordering Hours (Today)</h3>
+    {% if peak %}
+    {% set max_count = peak[0].order_count %}
+    {% for ph in peak %}
+    <div class="peak-bar-row">
+      <span class="peak-label">{{ ph.hour_label }}</span>
+      <div class="peak-bar-bg"><div class="peak-bar-fill" style="width:{{ (ph.order_count / max_count * 100)|round|int }}%"></div></div>
+      <span class="peak-count">{{ ph.order_count }}</span>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">No orders today yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Inventory + Payment Alerts -->
+<div class="two-col">
+  <div class="card">
+    <h3>📦 Inventory Alerts</h3>
+    {% if inv.low_stock_alerts %}
+      {% for item in inv.low_stock_alerts %}
+      <div class="alert-row {{ 'critical' if item.status == 'CRITICAL' else 'low' }}">
+        <span>{{ '🚨' if item.status == 'CRITICAL' else '⚠️' }}</span>
+        <span style="flex:1"><strong>{{ item.item_name }}</strong> — {{ item.current_stock }} units</span>
+        {% if item.estimated_daily_demand %}
+        <span style="font-size:12px">~{{ item.estimated_daily_demand }}/day</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+      <p style="font-size:12px;color:var(--text-dim);margin:10px 0 0;"><a href="/admin/inventory">Manage inventory →</a></p>
+    {% elif inv.total_items_tracked == 0 %}
+    <div class="empty-state">No inventory configured. <a href="/admin/inventory">Add items →</a></div>
+    {% else %}
+    <div class="alert-row ok">✅ All items adequately stocked.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>🏦 Payment Alerts</h3>
+    {% if needs_owner_orders %}
+    <p style="font-size:13px;font-weight:600;color:var(--danger)">{{ needs_owner_orders|length }} order(s) need review:</p>
+    {% for o in needs_owner_orders %}
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <span>{{ o.code }}</span><span>{{ o.amount }}</span>
+    </div>
+    {% endfor %}
+    <p style="font-size:12px;margin:8px 0 0;"><a href="/admin/needs-attention">Review now →</a></p>
+    {% elif unmatched_credits %}
+    <p style="font-size:13px;font-weight:600;color:var(--warn)">{{ unmatched_credits|length }} unmatched credit(s):</p>
+    {% for c in unmatched_credits %}
+    <div style="font-size:13px;padding:4px 0;">{{ c.amount }} {{ '· UTR: ' + c.utr if c.utr else '' }}</div>
+    {% endfor %}
+    <p style="font-size:12px;margin:8px 0 0;"><a href="/admin/credits">Review credits →</a></p>
+    {% else %}
+    <div class="alert-row ok">✅ No payment exceptions.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Cross-Sell + Recommendations -->
+<div class="two-col">
+  <div class="card">
+    <h3>🔗 Cross-Sell Opportunities</h3>
+    {% if cross_sell.insufficient_data %}
+    <div class="empty-state">{{ cross_sell.message }}</div>
+    {% else %}
+    {% for pair in cross_sell.pairs[:4] %}
+    <div class="cross-sell-row">
+      <span style="flex:1"><strong>{{ pair.source_item }}</strong> → {{ pair.target_item }}</span>
+      <span class="conf-badge">{{ pair.confidence_pct }}</span>
+    </div>
+    {% endfor %}
+    <p style="font-size:12px;color:var(--text-dim);margin:10px 0 0;"><a href="/admin/recommendations">All recommendations →</a></p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>💡 Top Items This Week</h3>
+    {% if top_7d %}
+    <ul class="rank-list">
+      {% for p in top_7d %}
+      <li>
+        <span class="rank-num">{{ p.rank }}</span>
+        <span class="rank-name">{{ p.name }}</span>
+        <span class="rank-meta">{{ p.qty_sold }} sold</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">Not enough data for 7-day view.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+  <a href="/admin/board"><button type="button">📋 Live Order Board</button></a>
+  <a href="/admin/daily-summary"><button type="button" class="secondary">📝 Full Daily Summary</button></a>
+  <a href="/admin/inventory"><button type="button" class="secondary">📦 Inventory</button></a>
+  <a href="/admin/recommendations"><button type="button" class="secondary">💡 Recommendations</button></a>
+</div>
+{% endblock %}

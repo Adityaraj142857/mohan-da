@@ -23,8 +23,8 @@ Build notes: [`PLAN.md`](PLAN.md), deviations from the spec:
 5. If a customer sends a payment screenshot, it's checked (amount, payee,
    status, reused/duplicate detection) — but it's a *helper*, not proof. A
    screenshot alone never marks an order paid.
-6. You get a live order board, a "needs attention" queue for anything
-   ambiguous, and daily reports — all in a browser on your own machine.
+6. **Business Intelligence**: The app doesn't just process orders; it learns from them. It tracks inventory, segments customers, finds cross-selling opportunities (e.g. "Maggi + Coke"), and recommends promotional offers.
+7. You get a live order board, a "needs attention" queue, and a comprehensive business dashboard — all in a browser on your own machine.
 
 ## Quick start (one command)
 
@@ -105,6 +105,7 @@ pip install -e ".[dev]"
 pytest                 # unit + scenario tests
 ruff check src tests   # linting
 python -m shopbot demo # scripted end-to-end day
+python -m shopbot seed-demo-analytics # generate demo data for the analytics dashboard
 ```
 
 ## Project layout

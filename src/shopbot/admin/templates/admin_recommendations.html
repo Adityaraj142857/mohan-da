@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Recommendations — ShopBot{% endblock %}
+{% block content %}
+<style>
+  .rec-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); background: var(--panel); }
+  .rec-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .rec-title { font-size: 16px; font-weight: 700; margin: 0; }
+  .rec-desc { font-size: 14px; margin-bottom: 16px; color: var(--text); }
+  .rec-meta { font-size: 13px; color: var(--text-dim); background: var(--bg); padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+  .rec-meta div { margin-bottom: 4px; }
+  .rec-meta div:last-child { margin-bottom: 0; }
+  .conf-strong { background: var(--brand-light); color: var(--brand-dark); }
+  .conf-moderate { background: var(--warn-light); color: var(--warn); }
+  
+  .promo-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .promo-row:last-child { border-bottom: none; }
+</style>
+
+<h1 class="page-title">Offer Recommendations</h1>
+<p class="page-subtitle">AI-driven suggestions to boost sales based on order velocity and cross-sell patterns.</p>
+
+<div style="display:grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+  
+  <!-- Left Column: New Recommendations -->
+  <div>
+    <h2>New Suggestions</h2>
+    {% if recs.insufficient_data %}
+      <div class="card empty-state">{{ recs.message }}</div>
+    {% elif not recs.offer_recommendations %}
+      <div class="card empty-state">No new offers to recommend today. Sales are steady.</div>
+    {% else %}
+      {% for rec in recs.offer_recommendations %}
+      <div class="rec-card">
+        <div class="rec-header">
+          <h3 class="rec-title">{{ rec.title }}</h3>
+          <span class="badge {{ 'conf-strong' if rec.confidence_label == 'Strong' else 'conf-moderate' }}">{{ rec.confidence_label }}</span>
+        </div>
+        <div class="rec-desc">{{ rec.description }}</div>
+        
+        <div class="rec-meta">
+          <div><strong>Reason:</strong> {{ rec.reason }}</div>
+          <div><strong>Evidence:</strong> {{ rec.evidence }}</div>
+        </div>
+        
+        <form method="post" action="/admin/promotions/create-from-rec" style="margin:0; display:flex; gap:10px; align-items:center;">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="title" value="{{ rec.title }}">
+          <input type="hidden" name="description" value="{{ rec.description }}">
+          <input type="hidden" name="reason" value="{{ rec.reason }}">
+          <input type="hidden" name="suggested_discount_paise" value="{{ rec.suggested_discount_paise }}">
+          <input type="hidden" name="item_names" value="{{ rec.item_names|join(',') }}">
+          
+          <button type="button" class="secondary" disabled>Review & Approve</button>
+          <span style="font-size:12px; color:var(--text-dim);">Approval flow coming soon.</span>
+        </form>
+      </div>
+      {% endfor %}
+    {% endif %}
+    
+    <h2 style="margin-top: 40px;">Top Cross-Sell Pairs</h2>
+    <div class="card">
+      {% if recs.insufficient_data %}
+        <div class="empty-state">Not enough data to find cross-sell pairs.</div>
+      {% else %}
+        <table style="margin:0;">
+          <tr><th>Item A</th><th>Item B</th><th>Confidence</th><th>Co-occurrence</th></tr>
+          {% for pair in recs.cross_sell_pairs[:10] %}
+          <tr>
+            <td style="font-weight:600">{{ pair.source_item }}</td>
+            <td>{{ pair.target_item }}</td>
+            <td><span class="badge conf-strong">{{ pair.confidence_pct }}</span></td>
+            <td>{{ pair.pair_count }} orders</td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:16px;">
+          * Confidence: percentage of orders containing Item A that also contain Item B.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Column: Active & Pending -->
+  <div>
+    <h2>Active Offers</h2>
+    <div class="card">
+      {% if recs.active_promotions %}
+        {% for p in recs.active_promotions %}
+        <div class="promo-row" style="flex-direction:column; align-items:flex-start; gap:4px;">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <strong style="font-size:15px;">{{ p.name }}</strong>
+            <span style="color:var(--brand-dark); font-weight:700;">{{ p.discount_display }} off</span>
+          </div>
+          <div style="font-size:13px; color:var(--text-dim);">{{ p.description }}</div>
+          <div style="display:flex; justify-content:flex-end; width:100%; margin-top:8px;">
+            <form method="post" action="/admin/promotions/{{ p.promotion_id }}/deactivate" style="margin:0;">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button type="submit" class="secondary danger" style="padding:4px 8px; font-size:12px;">Deactivate</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No active offers.</div>
+      {% endif %}
+    </div>
+
+    <h2 style="margin-top: 24px;">Pending Approval</h2>
+    <div class="card">
+      {% if recs.pending_promotions %}
+        {% for p in recs.pending_promotions %}
+        <div class="promo-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div>
+            <strong>{{ p.name }}</strong>
+            <div style="font-size:12px; color:var(--text-dim);">{{ p.discount_display }} off</div>
+          </div>
+          <div style="display:flex; gap:8px; width:100%;">
+            <form method="post" action="/admin/promotions/{{ p.promotion_id }}/approve" style="margin:0; flex:1;">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button type="submit" style="width:100%; padding:6px; font-size:12px;">Approve</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">Nothing pending.</div>
+      {% endif %}
+    </div>
+  </div>
+  
+</div>
+
+{% endblock %}

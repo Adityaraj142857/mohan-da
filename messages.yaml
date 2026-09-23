@@ -44,3 +44,7 @@ blocked_generic: "Sorry, we can't take this order right now. Please contact the 
 unknown_input: "Sorry, I didn't understand that. Reply *menu* to see items, or *help*."
 image_unexpected: "Got your image! If that's a payment screenshot, send it after you get the payment link."
 already_confirmed: "This order is already confirmed ✅"
+status_preparing: "🍳 Order {code} is being prepared in the kitchen!"
+status_ready: "🔔 Order {code} is ready for pickup!"
+status_out_for_delivery: "🛵 Order {code} is out for delivery to {hostel} room {room}!"
+status_completed: "✨ Order {code} is completed. Thank you!"

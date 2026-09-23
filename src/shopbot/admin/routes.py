@@ -1,5 +1,9 @@
 """Owner console (SPEC section 12). Password auth via session cookie, CSRF
-token on POST forms, binds to 127.0.0.1 unless BIND_HOST says otherwise."""
+token on POST forms, binds to 127.0.0.1 unless BIND_HOST says otherwise.
+
+Extended with Business Analytics dashboard, inventory, recommendations,
+customer detail, and daily summary pages.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy import select
 
 from shopbot.menu.loader import export_menu_yaml
-from shopbot.models import Credit, Customer, MenuItem, Order, Screenshot
+from shopbot.models import Credit, Customer, Inventory, MenuItem, Order, Promotion, Screenshot
 from shopbot.money import format_inr
 from shopbot.orders.service import mark_paid, transition_order
 from shopbot.verify.credits import add_manual_credit, ingest_sms
@@ -50,6 +54,11 @@ def _render(request: Request, name: str, ctx: dict) -> HTMLResponse:
     return request.app.state.jinja.TemplateResponse(request, name, ctx)
 
 
+# ===========================================================================
+# Auth
+# ===========================================================================
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request):
     return _render(request, "admin_login.html", {"error": None})
@@ -70,7 +79,61 @@ async def logout(request: Request):
     return RedirectResponse("/admin/login", status_code=303)
 
 
+# ===========================================================================
+# Dashboard (new landing page)
+# ===========================================================================
+
+
 @router.get("", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    _require_admin(request)
+    from shopbot.analytics.daily_summary import generate_daily_summary
+    from shopbot.analytics.inventory import get_inventory_status
+    from shopbot.analytics.products import get_cross_sell_pairs
+    from shopbot.analytics.sales import calculate_daily_sales, get_peak_hours, get_top_products
+
+    with request.app.state.db.session() as session:
+        kpi = calculate_daily_sales(session)
+        top_today = get_top_products(session, days=1, limit=5)
+        top_7d = get_top_products(session, days=7, limit=5)
+        peak = get_peak_hours(session, days=1, top_n=5)
+        inv = get_inventory_status(session)
+        cross_sell = get_cross_sell_pairs(session, limit=5)
+
+        # Payment exception detail
+        needs_owner_count = session.scalar(
+            select(Credit.__class__.__table__.c.id if False else Order.id)  # count
+        )
+        needs_owner_orders = session.scalars(
+            select(Order).where(Order.payment_state == "NEEDS_OWNER")
+        ).all()
+        unmatched_credits = session.scalars(
+            select(Credit).where(Credit.status == "UNMATCHED")
+        ).all()
+
+    ctx = {
+        "kpi": kpi,
+        "top_today": top_today,
+        "top_7d": top_7d,
+        "peak": peak,
+        "inv": inv,
+        "cross_sell": cross_sell,
+        "needs_owner_orders": [
+            {"code": o.code, "amount": format_inr(o.payable_paise)} for o in needs_owner_orders
+        ],
+        "unmatched_credits": [
+            {"id": c.id, "amount": format_inr(c.amount_paise), "utr": c.utr} for c in unmatched_credits
+        ],
+    }
+    return _render(request, "admin_dashboard.html", ctx)
+
+
+# ===========================================================================
+# Live Board (moved from root to /board)
+# ===========================================================================
+
+
+@router.get("/board", response_class=HTMLResponse)
 async def board(request: Request):
     _require_admin(request)
     with request.app.state.db.session() as session:
@@ -92,13 +155,20 @@ def _order_card(order: Order) -> dict:
         "amount": format_inr(order.payable_paise),
         "line_items": [f"{i.qty}x {i.name_snapshot}" for i in order.items],
         "customer": order.customer.wa_id if order.customer else "",
-        "next_status": _next_status(order.status),
+        "next_status": _next_status(order.status, order.fulfilment_type),
     }
 
 
-def _next_status(status: str) -> str | None:
-    chain = {"PAID": "PREPARING", "PREPARING": "READY", "READY": "OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY": "COMPLETED"}
-    return chain.get(status)
+def _next_status(status: str, fulfilment: str = "takeout") -> str | None:
+    if status == "PAID":
+        return "PREPARING"
+    elif status == "PREPARING":
+        return "READY"
+    elif status == "READY":
+        return "OUT_FOR_DELIVERY" if fulfilment == "delivery" else "COMPLETED"
+    elif status == "OUT_FOR_DELIVERY":
+        return "COMPLETED"
+    return None
 
 
 @router.post("/orders/{order_id}/advance")
@@ -109,10 +179,25 @@ async def advance_order(request: Request, order_id: str, csrf: str = Form(...)):
         order = session.get(Order, order_id)
         if order is None:
             raise HTTPException(status_code=404)
-        nxt = _next_status(order.status)
+        nxt = _next_status(order.status, fulfilment=order.fulfilment_type)
         if nxt:
             transition_order(session, order, nxt, reason="owner board action")
-    return RedirectResponse("/admin", status_code=303)
+            if order.customer and order.customer.wa_id:
+                tpl_key = f"status_{nxt.lower()}"
+                text = request.app.state.templates.render(
+                    tpl_key,
+                    code=order.code,
+                    hostel=order.hostel or "",
+                    room=order.room or "",
+                )
+                if text:
+                    request.app.state.channel.send_text(order.customer.wa_id, text)
+    return RedirectResponse("/admin/board", status_code=303)
+
+
+# ===========================================================================
+# Needs Attention
+# ===========================================================================
 
 
 @router.get("/needs-attention", response_class=HTMLResponse)
@@ -169,6 +254,11 @@ async def reject_order(request: Request, order_id: str, csrf: str = Form(...)):
         text = request.app.state.templates.render("claim_rejected")
     request.app.state.channel.send_text(wa_id, text)
     return RedirectResponse("/admin/needs-attention", status_code=303)
+
+
+# ===========================================================================
+# Credits
+# ===========================================================================
 
 
 @router.get("/credits", response_class=HTMLResponse)
@@ -246,6 +336,11 @@ async def dismiss_credit(request: Request, credit_id: str, csrf: str = Form(...)
     return RedirectResponse("/admin/credits", status_code=303)
 
 
+# ===========================================================================
+# Menu
+# ===========================================================================
+
+
 @router.get("/menu", response_class=HTMLResponse)
 async def menu_page(request: Request):
     _require_admin(request)
@@ -280,22 +375,54 @@ async def menu_export(request: Request, csrf: str = Form(...)):
     return RedirectResponse("/admin/menu", status_code=303)
 
 
+# ===========================================================================
+# Customers (enhanced)
+# ===========================================================================
+
+
 @router.get("/customers", response_class=HTMLResponse)
 async def customers_page(request: Request):
     _require_admin(request)
+    from shopbot.analytics.customers import get_all_customer_summaries
+
     with request.app.state.db.session() as session:
-        customers = session.scalars(select(Customer)).all()
-        rows = [
-            {
-                "id": c.id,
-                "wa_id": c.wa_id,
-                "orders": len(c.orders),
-                "fraud_flags": c.fraud_flags,
-                "blocked": c.blocked,
-            }
-            for c in customers
-        ]
+        rows = get_all_customer_summaries(session)
     return _render(request, "admin_customers.html", {"customers": rows})
+
+
+@router.get("/customers/{customer_id}", response_class=HTMLResponse)
+async def customer_detail(request: Request, customer_id: str):
+    _require_admin(request)
+    from shopbot.analytics.customers import get_customer_profile
+
+    with request.app.state.db.session() as session:
+        profile = get_customer_profile(session, customer_id)
+        if profile is None:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        # Recent orders
+        customer = session.get(Customer, customer_id)
+        recent_orders = sorted(
+            [o for o in customer.orders if o.status not in ("DRAFT",)],
+            key=lambda o: o.created_at or datetime.min.replace(tzinfo=UTC),
+            reverse=True,
+        )[:10]
+        orders_ctx = [
+            {
+                "code": o.code,
+                "status": o.status,
+                "amount": format_inr(o.payable_paise),
+                "items": ", ".join(f"{i.qty}x {i.name_snapshot}" for i in o.items),
+                "date": o.created_at.astimezone(__import__("shopbot.clock", fromlist=["IST"]).IST).strftime(
+                    "%-d %b %Y, %I:%M %p"
+                ) if o.created_at else "",
+            }
+            for o in recent_orders
+        ]
+    return _render(request, "admin_customer_detail.html", {
+        "profile": profile,
+        "recent_orders": orders_ctx,
+        "customer_id": customer_id,
+    })
 
 
 @router.post("/customers/{customer_id}/block")
@@ -307,6 +434,149 @@ async def toggle_block(request: Request, customer_id: str, csrf: str = Form(...)
         if customer:
             customer.blocked = not customer.blocked
     return RedirectResponse("/admin/customers", status_code=303)
+
+
+# ===========================================================================
+# Inventory (new)
+# ===========================================================================
+
+
+@router.get("/inventory", response_class=HTMLResponse)
+async def inventory_page(request: Request):
+    _require_admin(request)
+    from shopbot.analytics.inventory import get_inventory_status
+
+    with request.app.state.db.session() as session:
+        inv = get_inventory_status(session)
+        menu_items = session.scalars(select(MenuItem).where(MenuItem.available == True).order_by(MenuItem.sort)).all()
+
+    return _render(request, "admin_inventory.html", {
+        "inv": inv,
+        "menu_items": [{"id": m.id, "name": m.name} for m in menu_items],
+    })
+
+
+@router.post("/inventory/{inventory_id}/update")
+async def update_inventory(
+    request: Request,
+    inventory_id: str,
+    new_stock: int = Form(...),
+    csrf: str = Form(...),
+):
+    _require_admin(request)
+    _check_csrf(request, csrf)
+    from shopbot.analytics.inventory import update_stock
+
+    with request.app.state.db.session() as session:
+        found = update_stock(session, inventory_id, new_stock)
+        if not found:
+            raise HTTPException(status_code=404, detail="Inventory record not found")
+    return RedirectResponse("/admin/inventory", status_code=303)
+
+
+@router.post("/inventory/add")
+async def add_inventory(
+    request: Request,
+    menu_item_id: str = Form(...),
+    item_name: str = Form(...),
+    current_stock: int = Form(...),
+    low_stock_threshold: int = Form(10),
+    target_stock: int = Form(50),
+    csrf: str = Form(...),
+):
+    _require_admin(request)
+    _check_csrf(request, csrf)
+    with request.app.state.db.session() as session:
+        # Check if already exists
+        existing = session.scalar(
+            select(Inventory).where(Inventory.menu_item_id == menu_item_id)
+        )
+        if existing:
+            existing.current_stock = current_stock
+            existing.low_stock_threshold = low_stock_threshold
+            existing.target_stock = target_stock
+            existing.item_name = item_name
+        else:
+            session.add(Inventory(
+                menu_item_id=menu_item_id or None,
+                item_name=item_name,
+                current_stock=current_stock,
+                low_stock_threshold=low_stock_threshold,
+                target_stock=target_stock,
+            ))
+    return RedirectResponse("/admin/inventory", status_code=303)
+
+
+# ===========================================================================
+# Recommendations (new)
+# ===========================================================================
+
+
+@router.get("/recommendations", response_class=HTMLResponse)
+async def recommendations_page(request: Request):
+    _require_admin(request)
+    from shopbot.analytics.recommendations import get_offer_recommendations
+
+    with request.app.state.db.session() as session:
+        recs = get_offer_recommendations(session)
+    return _render(request, "admin_recommendations.html", {"recs": recs})
+
+
+@router.post("/promotions/{promo_id}/approve")
+async def approve_promotion(request: Request, promo_id: str, csrf: str = Form(...)):
+    _require_admin(request)
+    _check_csrf(request, csrf)
+    with request.app.state.db.session() as session:
+        promo = session.get(Promotion, promo_id)
+        if promo is None:
+            raise HTTPException(status_code=404)
+        promo.owner_approved = True
+        promo.active = True
+    return RedirectResponse("/admin/recommendations", status_code=303)
+
+
+@router.post("/promotions/{promo_id}/deactivate")
+async def deactivate_promotion(request: Request, promo_id: str, csrf: str = Form(...)):
+    _require_admin(request)
+    _check_csrf(request, csrf)
+    with request.app.state.db.session() as session:
+        promo = session.get(Promotion, promo_id)
+        if promo is None:
+            raise HTTPException(status_code=404)
+        promo.active = False
+    return RedirectResponse("/admin/recommendations", status_code=303)
+
+
+# ===========================================================================
+# Daily Summary (new)
+# ===========================================================================
+
+
+@router.get("/daily-summary", response_class=HTMLResponse)
+async def daily_summary_page(request: Request):
+    _require_admin(request)
+    from shopbot.analytics.daily_summary import generate_daily_summary
+
+    with request.app.state.db.session() as session:
+        summary = generate_daily_summary(session)
+    return _render(request, "admin_daily_summary.html", {"summary": summary})
+
+
+@router.get("/daily-summary/text")
+async def daily_summary_text(request: Request):
+    """Plain-text version of the daily summary (for n8n or other automation)."""
+    _require_admin(request)
+    from shopbot.analytics.daily_summary import generate_daily_summary
+
+    with request.app.state.db.session() as session:
+        summary = generate_daily_summary(session)
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(summary.text_report)
+
+
+# ===========================================================================
+# Reports
+# ===========================================================================
 
 
 @router.get("/reports", response_class=HTMLResponse)
