@@ -26,3 +26,11 @@ backups/
 # start.sh's PID files and logs for the background-launched processes
 .run/
 
+# Internal working/status notes — not part of the graded deliverables and
+# not meant for the professor to review (build scratchpad + a running dev
+# status log with casual internal notes). The actual submission content
+# lives in docs/assignment/.
+CURRENT.md
+PLAN.md
+prep/
+
