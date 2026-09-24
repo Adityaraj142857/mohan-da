@@ -16,6 +16,9 @@ need_hostel: >-
   Which hostel and room? (e.g. "Hostel B room 204")
 unknown_hostel: >-
   Sorry, we don't deliver to "{hostel}". We deliver to: {hostels}.
+ask_order_note: >-
+  Any special instructions for your order? (e.g. "less spicy", "no onion")
+  Reply with your note, or *no* to skip.
 summary: >-
   {lines}
   Subtotal ₹{subtotal}

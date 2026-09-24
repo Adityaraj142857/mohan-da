@@ -75,11 +75,12 @@ class Harness:
                 self.channel.send_image(wa_id, m.image_bytes or b"", m.caption)
         return result.messages
 
-    def confirm_order(self, wa_id: str, items_text: str, fulfilment_text: str, address_text: str | None = None):
+    def confirm_order(self, wa_id: str, items_text: str, fulfilment_text: str, address_text: str | None = None, note_text: str = "no"):
         self.send_text(wa_id, items_text)
         self.send_text(wa_id, fulfilment_text)
         if address_text:
             self.send_text(wa_id, address_text)
+        self.send_text(wa_id, note_text)  # answers "any special instructions?"; "no" skips
         self.send_text(wa_id, "yes")
         return self.get_active_order(wa_id)
 

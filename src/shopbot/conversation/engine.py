@@ -189,7 +189,7 @@ class ConversationEngine:
 
         state = conv.state or st.IDLE
 
-        if state in (st.IDLE, st.COLLECTING, st.NEED_FULFILMENT, st.NEED_ADDRESS):
+        if state in (st.IDLE, st.COLLECTING, st.NEED_FULFILMENT, st.NEED_ADDRESS, st.NEED_NOTES):
             return self._handle_collecting(session, conv, customer, context, norm, raw_text)
         if state == st.CONFIRMING:
             return self._handle_confirming(session, conv, customer, context, norm, raw_text)
@@ -305,7 +305,7 @@ class ConversationEngine:
                 if fulfilment == "delivery":
                     self._save_conv(conv, st.NEED_ADDRESS, context)
                     return EngineResult(messages=[Outbound(kind="text", text=self.templates.render("need_hostel"))])
-                return self._go_to_confirming(session, conv, customer, context)
+                return self._go_to_notes(session, conv, customer, context)
             # fall through: maybe they're adding more items instead of answering
         elif state == st.NEED_ADDRESS:
             hostel = _find_hostel(raw_text, self.settings.hostel_list())
@@ -323,6 +323,10 @@ class ConversationEngine:
                 )
             context["hostel"] = hostel
             context["room"] = room or "?"
+            return self._go_to_notes(session, conv, customer, context)
+        elif state == st.NEED_NOTES:
+            if norm not in st.NEGATIVES and raw_text.strip():
+                context["order_note"] = raw_text.strip()
             return self._go_to_confirming(session, conv, customer, context)
 
         # Parse as item message (also used to add items after an unresolved answer)
@@ -379,6 +383,15 @@ class ConversationEngine:
             return "delivery"
         return None
 
+    def _go_to_notes(self, session, conv, customer, context) -> EngineResult:
+        """Give every customer a chance to add free-text customization
+        before the final summary — not just the modifiers the parser
+        happens to catch (e.g. "extra spicy"). Anything typed here becomes
+        an order-level note the owner sees on the kitchen slip; it never
+        affects price."""
+        self._save_conv(conv, st.NEED_NOTES, context)
+        return EngineResult(messages=[Outbound(kind="text", text=self.templates.render("ask_order_note"))])
+
     def _go_to_confirming(self, session, conv, customer, context) -> EngineResult:
         draft_lines = context.get("draft_lines", [])
         fulfilment = context.get("fulfilment", "takeout")
@@ -391,6 +404,9 @@ class ConversationEngine:
             payable_preview = total  # exact preview computed at confirm time; keep message honest but simple
             unique_note = ""
 
+        order_note = context.get("order_note")
+        note_line = f"\nNote: {order_note}" if order_note else ""
+
         lines_text = self._format_lines(draft_lines)
         text = self.templates.render(
             "summary",
@@ -398,7 +414,7 @@ class ConversationEngine:
             subtotal=self._subtotal_str(draft_lines),
             fee=fee_paise // 100,
             total=format_inr(total)[1:],
-            unique_note=unique_note,
+            unique_note=unique_note + note_line,
         )
         self._save_conv(conv, st.CONFIRMING, context)
         return EngineResult(messages=[Outbound(kind="text", text=text)])
@@ -416,6 +432,7 @@ class ConversationEngine:
         room = context.get("room")
 
         order = orders_service.create_draft_order(session, customer)
+        order.note = context.get("order_note")
         parsed_lines = [
             ParsedLine(
                 item_id=l["item_id"],

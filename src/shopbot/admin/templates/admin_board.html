@@ -17,6 +17,9 @@
         <strong style="font-size:15px; color:var(--brand-dark);">{{ o.amount }}</strong>
       </div>
       <div style="font-size:13px; color:var(--text-dim); margin:6px 0;">{{ o.line_items|join(', ') }}</div>
+      {% if o.note %}
+      <div style="font-size:12.5px; background:var(--warn-light); color:var(--warn); border-radius:6px; padding:4px 8px; margin-bottom:8px;">📝 {{ o.note }}</div>
+      {% endif %}
       <div style="font-size:12.5px; margin-bottom:8px;">
         {% if o.fulfilment == 'delivery' %}🚴 {{ o.hostel }} {{ o.room }}{% else %}🏬 Takeout{% endif %}
         &nbsp;·&nbsp; <span style="color:var(--text-dim);">{{ o.customer }}</span>

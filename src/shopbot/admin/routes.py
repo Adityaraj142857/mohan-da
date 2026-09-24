@@ -149,6 +149,7 @@ def _order_card(order: Order) -> dict:
         "room": order.room,
         "amount": format_inr(order.payable_paise),
         "line_items": [f"{i.qty}x {i.name_snapshot}" for i in order.items],
+        "note": order.note,
         "customer": order.customer.wa_id if order.customer else "",
         "next_status": _next_status(order.status, order.fulfilment_type),
     }

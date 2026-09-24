@@ -231,6 +231,7 @@ def test_10_bank_signal_none_all_owner_confirmed(h):
 def test_cancel_before_payment(h):
     h.send_text("wa-c1", "1 tea")
     h.send_text("wa-c1", "takeout")
+    h.send_text("wa-c1", "no")  # skip "any special instructions?"
     h.send_text("wa-c1", "yes")
     order = h.get_active_order("wa-c1")
     h.send_text("wa-c1", "cancel")
@@ -242,3 +243,16 @@ def test_no_price_increase_ever(h):
     """Constraint C2/C4: payable never exceeds total (discount mode default)."""
     order = h.confirm_order("wa-price", "1 chicken fried rice", "delivery", "Hostel A room 1")
     assert order.payable_paise <= order.total_paise
+
+
+def test_order_note_captured_and_never_affects_price(h):
+    order = h.confirm_order(
+        "wa-note", "1 chai", "takeout", note_text="extra hot please, no sugar"
+    )
+    assert order.note == "extra hot please, no sugar"
+    assert order.total_paise == 1000  # unaffected by the note
+
+
+def test_order_note_skipped_with_no(h):
+    order = h.confirm_order("wa-note-skip", "1 chai", "takeout", note_text="no")
+    assert order.note is None
