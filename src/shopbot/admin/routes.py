@@ -87,7 +87,6 @@ async def logout(request: Request):
 @router.get("", response_class=HTMLResponse)
 async def dashboard(request: Request):
     _require_admin(request)
-    from shopbot.analytics.daily_summary import generate_daily_summary
     from shopbot.analytics.inventory import get_inventory_status
     from shopbot.analytics.products import get_cross_sell_pairs
     from shopbot.analytics.sales import calculate_daily_sales, get_peak_hours, get_top_products
@@ -100,10 +99,6 @@ async def dashboard(request: Request):
         inv = get_inventory_status(session)
         cross_sell = get_cross_sell_pairs(session, limit=5)
 
-        # Payment exception detail
-        needs_owner_count = session.scalar(
-            select(Credit.__class__.__table__.c.id if False else Order.id)  # count
-        )
         needs_owner_orders = session.scalars(
             select(Order).where(Order.payment_state == "NEEDS_OWNER")
         ).all()
