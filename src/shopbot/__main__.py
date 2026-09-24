@@ -101,6 +101,18 @@ def cmd_test_sms(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_seed_analytics(args: argparse.Namespace) -> int:
+    from shopbot.config import load_settings
+    from shopbot.db import Database
+    from shopbot.tools.seed_analytics_demo import seed_analytics_demo
+
+    settings = load_settings()
+    db = Database(settings)
+    db.create_all()
+    seed_analytics_demo(db, settings)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="shopbot")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -114,6 +126,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_sms = sub.add_parser("test-sms", help="Test a pasted bank SMS against the parser")
     p_sms.add_argument("rest", nargs=argparse.REMAINDER)
     p_sms.set_defaults(func=cmd_test_sms)
+
+    p_seed = sub.add_parser("seed-demo-analytics", help="Seed database with deterministic analytics data for demo")
+    p_seed.set_defaults(func=cmd_seed_analytics)
 
     return parser
 

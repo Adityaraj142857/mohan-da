@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Inventory — ShopBot{% endblock %}
+{% block content %}
+<style>
+  .stock-status.critical { color: var(--danger); font-weight: bold; }
+  .stock-status.low { color: var(--warn); font-weight: bold; }
+  .stock-status.ok { color: var(--brand-dark); }
+</style>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h1 class="page-title" style="margin:0;">Inventory Management</h1>
+  <button type="button" onclick="document.getElementById('add-modal').showModal()">+ Track New Item</button>
+</div>
+
+<div class="card">
+  {% if inv.total_items_tracked > 0 %}
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Status</th>
+        <th>Stock</th>
+        <th>Daily Demand</th>
+        <th>Days of Stock</th>
+        <th>Restock Rec.</th>
+        <th>Update</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in inv.items %}
+      <tr>
+        <td style="font-weight:600;">{{ item.item_name }}</td>
+        <td class="stock-status {{ item.status|lower }}">
+          {{ '🚨 ' if item.status == 'CRITICAL' else ('⚠️ ' if item.status == 'LOW' else '✅ ') }}{{ item.status }}
+        </td>
+        <td style="font-size:16px; font-weight:700;">{{ item.current_stock }}</td>
+        <td>{{ item.estimated_daily_demand if item.estimated_daily_demand else '—' }}</td>
+        <td>{{ item.days_of_stock if item.days_of_stock else '—' }}</td>
+        <td>
+          {% if item.recommended_restock > 0 %}
+            <span style="color:var(--brand-dark); font-weight:600;">+{{ item.recommended_restock }}</span>
+            <div style="font-size:11px; color:var(--text-dim); max-width:150px; line-height:1.2; margin-top:4px;">
+              {{ item.restock_reason }}
+            </div>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="/admin/inventory/{{ item.inventory_id }}/update" style="display:flex; gap:4px; margin:0;">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="number" name="new_stock" value="{{ item.current_stock }}" min="0" style="width:60px; padding:4px;">
+            <button type="submit" class="secondary" style="padding:4px 8px;">Save</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state" style="padding: 40px;">
+    <h3>No items tracked</h3>
+    <p style="color:var(--text-dim); margin-bottom:20px;">Add items to inventory to start tracking stock levels, receiving alerts, and generating restock recommendations.</p>
+    <button type="button" onclick="document.getElementById('add-modal').showModal()">Track First Item</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add Inventory Modal -->
+<dialog id="add-modal" style="border:1px solid var(--border); border-radius:var(--radius); padding:24px; max-width:400px; box-shadow:var(--shadow);">
+  <h3 style="margin-top:0;">Track Item in Inventory</h3>
+  <form method="post" action="/admin/inventory/add">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    
+    <label style="display:block; margin-bottom:4px; font-size:13px; font-weight:600;">Menu Item</label>
+    <select name="menu_item_id" style="width:100%; margin-bottom:16px; padding:8px;" onchange="document.getElementById('item_name').value = this.options[this.selectedIndex].text;">
+      <option value="">-- Select Item --</option>
+      {% for m in menu_items %}
+      <option value="{{ m.id }}">{{ m.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="hidden" name="item_name" id="item_name" value="">
+    
+    <label style="display:block; margin-bottom:4px; font-size:13px; font-weight:600;">Current Stock Count</label>
+    <input type="number" name="current_stock" value="0" min="0" style="width:100%; margin-bottom:16px; padding:8px;" required>
+    
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+      <div>
+        <label style="display:block; margin-bottom:4px; font-size:13px; font-weight:600;">Alert Threshold</label>
+        <input type="number" name="low_stock_threshold" value="10" min="0" style="width:100%; padding:8px;" required>
+        <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">Alert when below this</div>
+      </div>
+      <div>
+        <label style="display:block; margin-bottom:4px; font-size:13px; font-weight:600;">Target Stock</label>
+        <input type="number" name="target_stock" value="50" min="0" style="width:100%; padding:8px;" required>
+        <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">Goal after restock</div>
+      </div>
+    </div>
+    
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="secondary" onclick="document.getElementById('add-modal').close()">Cancel</button>
+      <button type="submit">Start Tracking</button>
+    </div>
+  </form>
+</dialog>
+
+{% endblock %}

@@ -1,6 +1,11 @@
 """SQLAlchemy ORM models (SPEC section 6). All money is integer paise, all
 timestamps are UTC. `events` is an append-only audit log for every state
-change and decision, as required by SPEC C7/section 14."""
+change and decision, as required by SPEC C7/section 14.
+
+Extended models (analytics layer):
+  Inventory   — stock levels per menu item (optional; graceful if missing)
+  Promotion   — owner-approved offers/discounts
+"""
 
 from __future__ import annotations
 
@@ -131,6 +136,8 @@ class Order(Base):
     paid_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     paid_via: Mapped[str | None] = mapped_column(String, nullable=True)
     matched_credit_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Analytics: tracks whether inventory was deducted for this order (idempotency guard)
+    inventory_deducted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     customer: Mapped[Customer] = relationship(back_populates="orders")
     items: Mapped[list[OrderItem]] = relationship(back_populates="order", cascade="all, delete-orphan")
@@ -231,3 +238,60 @@ class InboundMessageLog(Base):
 
     message_id: Mapped[str] = mapped_column(String, primary_key=True)
     received_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
+
+
+# ---------------------------------------------------------------------------
+# Analytics extension models
+# ---------------------------------------------------------------------------
+
+
+class Inventory(Base):
+    """Stock levels for menu items. Records are optional — if a record does
+    not exist for a menu item, the system treats it as untracked (no alerts).
+    All writes go through the analytics inventory service; reads are from
+    any admin route or analytics query."""
+
+    __tablename__ = "inventory"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    # Soft FK — nullable so we can track items not currently in menu_items
+    menu_item_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    item_name: Mapped[str] = mapped_column(String)  # snapshot in case item removed
+    current_stock: Mapped[int] = mapped_column(Integer, default=0)
+    low_stock_threshold: Mapped[int] = mapped_column(Integer, default=10)
+    reorder_level: Mapped[int] = mapped_column(Integer, default=5)
+    target_stock: Mapped[int] = mapped_column(Integer, default=50)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
+
+
+class Promotion(Base):
+    """Owner-approved offers and bundle discounts. Applied at order-creation
+    time only; never modifies an existing order's price.
+
+    offer_type:
+      'percentage' — discount_paise is treated as basis points (e.g. 10 = 10%)
+      'fixed'      — discount_paise is the absolute paise reduction
+      'bundle'     — bundle_price_paise overrides the combined item price
+    """
+
+    __tablename__ = "promotions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String)
+    offer_type: Mapped[str] = mapped_column(String)  # percentage|fixed|bundle
+    # JSON list of menu_item_ids this promotion applies to
+    item_ids: Mapped[list] = mapped_column(JSON, default=list)
+    # Human-readable list of item names (snapshot)
+    item_names: Mapped[list] = mapped_column(JSON, default=list)
+    # For fixed/percentage discounts: the discount magnitude
+    discount_paise: Mapped[int] = mapped_column(Integer, default=0)
+    # For bundle offers: the all-in price
+    bundle_price_paise: Mapped[int] = mapped_column(Integer, default=0)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Evidence that drove the recommendation
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=False)
+    owner_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    start_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    end_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)

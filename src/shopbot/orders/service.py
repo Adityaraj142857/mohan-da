@@ -5,7 +5,7 @@ status state machine (SPEC 6, 7, 11.6). Illegal transitions raise
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -190,6 +190,33 @@ def mark_paid(session: Session, order: Order, paid_via: str, clock: Clock, credi
             payload={"via": paid_via, "credit_id": credit_id},
         )
     )
+    # Analytics: deduct inventory for paid items (idempotent, graceful).
+    # This call is fully guarded — it cannot raise, cannot affect payment state,
+    # and only fires once per order (guarded by inventory_deducted flag).
+    if not order.inventory_deducted:
+        try:
+            _deduct_inventory(session, order)
+            order.inventory_deducted = True
+        except Exception:  # noqa: BLE001
+            pass  # inventory is advisory; never block payment confirmation
+
+
+def _deduct_inventory(session: Session, order: Order) -> None:
+    """Decrement inventory.current_stock for each item in the order.
+    Only operates on Inventory records that already exist — missing records
+    are silently skipped. Called only from mark_paid()."""
+    from shopbot.models import Inventory
+
+    for item in order.items:
+        if not item.item_id:
+            continue
+        inv = session.scalar(
+            select(Inventory).where(Inventory.menu_item_id == item.item_id)
+        )
+        if inv is None:
+            continue
+        inv.current_stock = max(0, inv.current_stock - item.qty)
+        inv.updated_at = datetime.now(UTC)
 
 
 def cancel_order(session: Session, order: Order, reason: str) -> None:
